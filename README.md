@@ -64,6 +64,6 @@ $ es cat unified-parent
 $ es grep "nike shoes" unified-parent
 ```
 
-Note that *"es rm unified-parent"* can actually delete the index
+Note that **"es rm unified-parent"** can actually delete the index
 `unified-parent` on the ES cluster.  Please use it with care and your
 own risk.
