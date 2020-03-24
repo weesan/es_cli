@@ -1,0 +1,865 @@
+#!/usr/bin/env python
+
+from __future__ import print_function
+import os
+import argparse
+import subprocess as sp
+import sys
+import urllib
+import json
+
+class ES:
+    def __init__(self, options):
+        self.options = options
+        self.commands = {
+            # Help.
+            "help":                   self.help,
+            # Server EP info.         
+            "server":                 self.server,
+            "port":                   self.port,
+            "url":                    self.url,
+            # Cluster info.           
+            "health":                 self.health,
+            "status":                 self.status,
+            "info":                   self.info,
+            "shards":                 self.shards,
+            "state":                  self.state,
+            "aliases":                self.aliases,
+            "plugins":                self.plugins,
+            "tasks":                  self.tasks,
+            "cluster-stats":          self.cluster_stats,
+            "cluster-settings":       self.cluster_settings,
+            "merge-stats":            self.merge_stats,
+            "thread-pool":            self.thread_pool,
+            "load":                   self.load,
+            "cpu-load":               self.cpu_load,
+            "reindex-status":         self.reindex_status,
+            "cancel-reindex":         self.cancel_reindex,
+            "allocation":             self.allocation,
+            "enable-allocation":      self.enable_allocation,
+            "disable-allocation":     self.disable_allocation,
+            "enable-rebalance":       self.enable_rebalance,
+            "throttle":               self.throttle,
+            "search-queue-size":      self.search_queue_size,
+            "bulk-queue-size":        self.bulk_queue_size,
+            "index-queue-size":       self.index_queue_size,
+            "set-s3-repo":            self.set_s3_repo,
+            "get-s3-repo":            self.get_s3_repo,
+            "set-gcs-repo":           self.set_gcs_repo,
+            "get-gcs-repo":           self.get_gcs_repo,
+            "create-snapshot":        self.create_snapshot,
+            "restore-snapshot":       self.restore_snapshot,
+            "delete-snapshot":        self.delete_snapshot,
+            "snapshot-info":          self.snapshot_info,
+            "snapshot-status":        self.snapshot_status,
+            "init-cluster-recovery":  self.init_cluster_recovery,
+            "cluster-recovery":       self.cluster_recovery,
+            "index-recovery":         self.index_recovery,
+            "explain-query":          self.explain_query,
+            "analyze":                self.analyze,
+            "license":                self.license,
+            "watermark":              self.watermark,
+            "template":               self.template,
+            # Node commands.          
+            "nodes":                  self.nodes,
+            "nodes-stats":            self.nodes_stats,
+            "nodes-info":             self.nodes_info,
+            "node":                   self.node,
+            "os":                     self.os,
+            "process":                self.process,
+            "http":                   self.http,
+            "breakers":               self.breakers,
+            "jvm":                    self.jvm,
+            "gc-risk":                self.gc_risk,
+            "gc-bad":                 self.gc_bad,
+            "hot-threads":            self.hot_threads,
+            "segments-count":         self.segments_count,
+            ## Index commands.         
+            "alias":                  self.alias,
+            "unalias":                self.unalias,
+            "stats":                  self.stats,
+            "info":                   self.info,
+            "mappings":               self.mappings,
+            "settings":               self.settings,
+            "clear-cache":            self.clear_cache,
+            "open":                   self.open,
+            "close":                  self.close,
+            "optimize":               self.optimize,
+            "replicate":              self.replicate,
+            "refresh-interval":       self.refresh_interval,
+            "flush_threshold_size":   self.flush_threshold_size,
+            "durability":             self.durability,
+            "sync-interval":          self.sync_interval,
+            "reroute":                self.reroute,
+            "nuke":                   self.nuke,
+            "copy-info":              self.copy_info,
+            "reindex":                self.reindex,
+            "count":                  self.count,
+            "recovery-stats":         self.recovery_stats,
+            "flush":                  self.flush,
+            "include":                self.include,
+            "exclude":                self.exclude,
+            "dump":                   self.dump,
+            "move-shard":             self.move_shard,
+            "cancel-move-shard":      self.cancel_move_shard,
+            "move-primary-shard":     self.move_primary_shard,
+            "random-shuffle":         self.random_shuffle,
+            "max-result-window":      self.max_result_window,
+            "read-only-allow-delete": self.read_only_allow_delete,
+            "read-mode":              self.read_mode,
+            "write-mode":             self.write_mode,
+            # Experiment commands.
+            "index":                  self.index,
+            "index-json":             self.index_json,
+            "stemmer-override":       self.stemmer_override,
+            "synonyms":               self.synonyms,
+            "get":                    self.get,
+            "put":                    self.put,
+            "post":                   self.post,
+            "search":                 self.search,
+            # Unix-like commands.     
+            "ls":                     self.ls,
+            "cat":                    self.cat,
+            "rm":                     self.rm,
+            "grep":                   self.grep,
+        }
+
+    def __url(self, argv = []):
+        host, port = self.options["host"], self.options["port"]
+
+        # Username and password when needed.
+        username, pw = self.options["username"], self.options["password"]
+
+        if username and pw:
+            return "http://%s:%s@%s:%s" % (username, pw, host, port)
+        else:    
+            return "http://%s:%s" % (host, port)
+
+    def __argv(self, argv, i, default = ""):
+        return argv[i] if len(argv) >= (i + 1) else default
+
+    def __argvs(self, argv, i, default = []):
+        return argv[i:] if len(argv) >= (i + 1) else default
+    
+    def __run(self, cmd, method = "GET", pipe = None, data = None):
+        curl = "curl -s -X%s" % method
+
+        # ESv6 or greater requires content-type header.
+        if not self.options["v2"] and method in [ "POST", "PUT", "GET" ]:
+            curl += " -H 'Content-Type: application/json'"
+                
+        # Host, port and path.
+        curl += " '%s/%s'" % (self.__url(), cmd)
+
+        # Data
+        if data:
+            curl += " -d '%s'" % data
+
+        # Piping for specific info.
+        if pipe:
+            curl += " | %s" % pipe
+
+        # Output the curl command if -v is specified.
+        if self.options["verbose"]:
+            print(curl)
+
+        # Run the curl command and capture the output.
+        res = sp.check_output(curl, shell=True).strip().decode("ascii", "ignore")
+        if not self.options["silent"] and len(res) > 0:
+            print(res)
+
+        return res
+
+    def run(self, command, argv):
+        try:
+            func = self.commands[command]
+            func(argv)
+        except KeyError as err:
+            print("Unknown command: %s" % command, file = sys.stderr)
+        except sp.CalledProcessError as err:
+            print("Is ES running on %s?" % self.__url(), file = sys.stderr)
+        except Exception as err:
+            raise(err)
+
+        return self
+
+    def help(self, argv = []):
+        """help"""
+        print("Some examples:")
+        for func in sorted(self.commands.values()):
+            print("  es", func.__doc__)
+        
+    def health(self, argv = []):
+        """health [<green|yellow>] [<timeout>]"""
+        if len(argv) == 0:
+            self.__run("_cluster/health?pretty")
+        else:
+            wait = self.__argv(argv, 0, "green")
+            timeout = self.__argv(argv, 1, "30s")
+            self.__run("_cluster/health?pretty" +
+                       "&wait_for_status=%s&timeout=%s" % (wait, timeout))
+            
+    def status(self, argv = []):
+        """status"""
+        self.__run("_cluster/health?pretty", pipe = "jq -r .status")
+
+    def info(self, argv = []):
+        """info [<index>]"""
+        index = self.__argv(argv, 0)
+        self.__run("%s?pretty" % index)
+
+    def shards(self, argv = []):
+        """shards"""
+        self.__run("_cat/shards?v&h=index,shard,prirep,state,docs,store,ip,node,unassigned.reason")
+
+    def server(self, argv = []):
+        """server"""
+        print(self.options["host"])
+        
+    def port(self, argv = []):
+        """port"""
+        print(self.options["port"])
+        
+    def url(self, argv = []):
+        """url"""
+        print(self.__url() + "/")
+
+    def state(self, argv = []):
+        """state"""
+        self.__run("_cluster/state?pretty")
+
+    def aliases(self, argv = []):
+        """aliases"""
+        self.__run("_cat/aliases?v")
+        
+    def plugins(self, argv = []):
+        """plugins"""
+        self.__run("_cat/plugins?v")
+
+    def tasks(self, argv = []):
+        """tasks"""
+        self.__run("_tasks?pretty")
+        
+    def cluster_stats(self, argv = []):
+        """cluster-stats"""
+        self.__run("_cluster/stats?pretty")
+        
+    def cluster_settings(self, argv = []):
+        """cluster-settings"""
+        self.__run("_cluster/settings?pretty")
+        
+    def merge_stats(self, argv = []):
+        """merge-stats"""
+        self.__run("_stats/merge?pretty")
+
+    def thread_pool(self, argv = []):
+        """thread-pool"""
+        self.__run("_cat/thread_pool?v")
+
+    def load(self, argv = []):
+        """load (to be implemented)"""
+        pass
+
+    def cpu_load(self, argv = []):
+        """cpu-load"""
+        self.__run("_nodes/stats?pretty",
+                   pipe = "jq -r '.nodes[] | [.name, .process.cpu.percent] | @tsv' | /usr/bin/sort -k2 -nr")
+        
+    def reindex_status(self, argv = []):
+        """reindex-status"""
+        self.__run("_tasks?detailed=true&actions=*reindex&pretty")
+        
+    def cancel_reindex(self, argv = []):
+        """cancel-reindex"""
+        self.__run("_tasks/_cancel?actions=*reindex&pretty", "POST")
+        
+    def allocation(self, argv = []):
+        """allocation"""
+        self.__run("_cat/allocation?v")
+        
+    def enable_allocation(self, argv = []):
+        """enable-allocation <index> (to be implemented)"""
+
+    def disable_allocation(self, argv = []):
+        """disable-allocation <index> (to be implemented)"""
+        
+    def enable_rebalance(self, argv = []):
+        """enable-rebalance <index> (to be implemented)"""
+
+    def throttle(self, argv = []):
+        """throttle <none|merge> [<size>](to be implemented)"""
+        
+    def search_queue_size(self, argv = []):
+        """search-queue-size <int> (to be implemented)"""
+        
+    def bulk_queue_size(self, argv = []):
+        """bulk-queue-size <int> (to be implemented)"""
+        
+    def index_queue_size(self, argv = []):
+        """index-queue-size <int> (to be implemented)"""
+
+    def set_s3_repo(self, argv = []):
+        """set-s3-repo <repo-name> <s3-bucket> <aws-region> <base-path>"""
+
+    def get_s3_repo(self, argv = []):
+        """get-s3-repo <repo-name>"""
+
+    def set_gcs_repo(self, argv = []):
+        """set-gcs-repo <repo-name> <gcs-bucket> <client> <base-path>"""
+        repo = self.__argv(argv, 0)
+        bucket = self.__argv(argv, 1)
+        client = self.__argv(argv, 2)
+        base_path = self.__argv(argv, 3)
+        settings = '''
+            {
+                "type": "gcs",
+                "settings": {
+                  "bucket": "%s",
+                  "client": "%s",
+                  "base_path": "%s",
+                  "compress": true,
+                  "max_snapshot_bytes_per_sec": "100mb",
+                  "max_restore_bytes_per_sec": "1024mb"
+                }
+            }
+        ''' % (bucket, client, base_path)
+        self.__run("_snapshot/%s?pretty" % repo,
+                   method = "POST", data = settings)
+
+    def get_gcs_repo(self, argv = []):
+        """get-gcp-repo <repo-name>"""
+        repo = self.__argv(argv, 0)
+        self.__run("_snapshot/%s?pretty" % repo)
+
+    def create_snapshot(self, argv = []):
+        """create-snapshot  <repo-name> <snapshot-id> <indices>"""
+
+    def restore_snapshot(self, argv = []):
+        """restore-snapshot <repo-name> <snapshot-id> <indices>"""
+        repo = self.__argv(argv, 0)
+        snapshot_id = self.__argv(argv, 1, "_all")
+        indices = self.__argvs(argv, 2)
+        
+        if not indices:
+            # Restore snapshots for all indices.
+            self.__run("_snapshot/%s/%s/_restore?pretty" % (repo, snapshot_id),
+                       method =  "POST")
+        else:
+            # Restore snapshots for the given indices.
+            settings = '''
+                {
+                    "indices": "%s",
+                    "include_global_state": false,
+                    "index_settings": {
+                        "index.number_of_replicas": 0,
+                        "index.routing.allocation.enable": "all"
+                    },
+                    "ignore_index_settings": [
+                        "index.routing.allocation.include.tag"
+                    ]
+                }
+            ''' % ",".join(indices)
+            self.__run("_snapshot/%s/%s/_restore?pretty" % (repo, snapshot_id),
+                       method = "POST", data = settings)
+
+    def delete_snapshot(self, argv = []):
+        """delete-snapshot  <repo-name> <snapshot-id>"""
+
+    def snapshot_info(self, argv = []):
+        """snapshot-info    <repo-name> <snapshot-id>"""
+        repo = self.__argv(argv, 0)
+        snapshot_id = self.__argv(argv, 1, "_all")
+        self.__run("_snapshot/%s/%s?pretty" % (repo, snapshot_id))
+
+    def snapshot_status(self, argv = []):
+        """snapshot-status  <repo-name>"""
+        repo = self.__argv(argv, 0)
+        snapshot_id = self.__argv(argv, 1, "_all")
+        self.__run("_snapshot/%s/%s/_status?pretty" % (repo, snapshot_id))
+
+    def init_cluster_recovery(self, argv = []):
+        """init-cluster-recovery <num>"""
+
+    def cluster_recovery(self, argv = []):
+        """cluster-recovery <num>"""
+
+    def index_recovery(self, argv = []):
+        """index-recovery <num>"""
+
+    def explain_query(self, argv = []):
+        """explain-query <index>"""
+        index = self.__argv(argv, 0)
+        self.__run("%s/_validate/query?explain&pretty" % index, data = "@-")
+
+    # XXX
+    def analyze(self, argv = []):
+        """analyze <analyzer> <tokenizer> <text>"""
+        analyzer = self.__argv(argv, 0)
+        filter   = self.__argv(argv, 1, "standard")
+        text     = self.__argv(argv, 2, "@-")
+        self.__run("_analyze?analyzer=%s&filter=%s&pretty" % (analyzer, filter), data = text)
+
+    def license(self, argv = []):
+        """license"""
+        self.__run("_xpack/license")
+
+    def watermark(self, argv = []):
+        """watermark <low> <high>"""
+        # XXX
+
+    def template(self, argv = []):
+        """template <template-name>"""
+        template_name = self.__argv(argv, 0)
+        self.__run("_template/%s" % template_name)
+
+    def nodes(self, argv = []):
+        """nodes"""
+        self.__run("_cat/nodes?v")
+
+    def nodes_stats(self, argv = [], pipe = None):
+        """nodes-stats"""
+        node = self.__argv(argv, 0)
+        self.__run("_nodes/%s/stats?pretty" % node, pipe = pipe)
+
+    def nodes_info(self, argv = []):
+        """nodes-info"""
+        self.__run("_nodes?pretty")
+
+    def node(self, argv = []):
+        """node [<node_name>]"""
+        node = self.__argv(argv, 0)
+        self.__run("_nodes/%s?pretty" % node)
+
+    def __nodes_stats_helper (self, node, field):
+        pipe = "jq '.nodes[]|{name:.name, %s:.%s}'" % (field, field)
+        self.nodes_stats(node, pipe = pipe)
+        
+    def os(self, argv = []):
+        """os [<node_name>]"""
+        node = self.__argv(argv, 0)
+        self.__nodes_stats_helper(node, "os")
+        
+    def process(self, argv = []):
+        """process [<node_name>]"""
+        node = self.__argv(argv, 0)
+        self.__nodes_stats_helper(node, "process")
+
+    def http(self, argv = []):
+        """http [<node_name>]"""
+        node = self.__argv(argv, 0)
+        self.__nodes_stats_helper(node, "http")
+
+    def breakers(self, argv = []):
+        """breakers [<node_name>]"""
+        node = self.__argv(argv, 0)
+        self.__nodes_stats_helper(node, "breakers")
+
+    def jvm(self, argv = []):
+        """jvm [<node_name>]"""
+        node = self.__argv(argv, 0)
+        self.__nodes_stats_helper(node, "jvm")
+
+    # https://www.elastic.co/guide/en/elasticsearch/guide/current/_monitoring_individual_nodes.html
+    def __gc_helper (self, node, percent):
+        pipe = \
+            "jq -r '.nodes[]|[.host, .jvm.mem.heap_used_percent > %s] | @tsv'| sort -k2r -k1" % percent
+        self.nodes_stats(node, pipe = pipe)
+  
+    def gc_risk(self, argv = []):
+        """gc-risk [<node_name>]"""
+        node = self.__argv(argv, 0)
+        self.__gc_helper(node, 75)
+
+    def gc_bad(self, argv = []):
+        """gc-bad [<node_name>]"""
+        node = self.__argv(argv, 0)
+        self.__gc_helper(node, 90)
+
+    def hot_threads(self, argv = []):
+        """hot-threads"""
+        node = self.__argv(argv, 0)
+        size = self.__argv(argv, 1, 3)
+        self.__run("_nodes/%s/hot_threads?threads=%s" % (node, size))
+
+    def segments_count(self, argv = []):
+        """segments-count"""
+        pipe = "jq -r '.nodes[]|[.name,.indices.segments.count]|@tsv'|sort"
+        self.nodes_stats("", pipe = pipe)
+
+    def alias(self, argv = []):
+        """alias <index_name> <alias>"""
+        index = self.__argv(argv, 0)
+        new_index = self.__argv(argv, 1)
+        self.__run("%s/_alias/%s?pretty" % (index, new_index), "PUT")
+
+    def unalias(self, argv = []):
+        """unalias <index_name> <alias>"""
+        index = self.__argv(argv, 0)
+        new_index = self.__argv(argv, 1)
+        self.__run("%s/_alias/%s?pretty" % (index, new_index), "DELETE")
+        '''
+        cmd = """
+        {
+            "actions": [
+                { "remove": { "index": "%s", "alias": "%s" } }
+            ]
+        }
+        """ % (index, new_index)
+        self.__run("_aliases", "POST", data = cmd);
+        '''
+
+    def stats(self, argv = []):
+        """stats [<index>]"""
+        index = self.__argv(argv, 0)
+        self.__run("%s/_stats?pretty" % index)
+
+    def info(self, argv = []):
+        """info [<index>]"""
+        index = self.__argv(argv, 0)
+        self.__run("%s?pretty" % index)
+
+    def mappings(self, argv = []):
+        """mappings [<index>]"""
+        index = self.__argv(argv, 0)
+        self.__run("%s/_mappings?pretty" % index)
+
+    def settings(self, argv = []):
+        """settings [<index>]"""
+        index = self.__argv(argv, 0)
+        self.__run("%s/_settings?pretty" % index)
+
+    def clear_cache(self, argv = []):
+        """clear-cache [<index>]"""
+        index = self.__argv(argv, 0)
+        self.__run("%s/_cache/clear?pretty" % index)
+
+    def open(self, argv = []):
+        """open <index>"""
+        index = self.__argv(argv, 0)
+        self.__run("%s/_open?pretty" % index, "POST")
+
+    def close(self, argv = []):
+        """close <index>"""
+        index = self.__argv(argv, 0)
+        self.__run("%s/_close?pretty" % index, "POST")
+
+    # XXX
+    def optimize(self, argv = []):
+        """optimize <index> [num]"""
+        index = self.__argv(argv, 0)
+        num = self.__argv(argv, 1, 1)
+        self.__run("%s/_optimize?max_num_segments=%s&pretty" % (index, num),
+                   "POST")
+
+    def replicate(self, argv = []):
+        """replicate <index> num"""
+        index = self.__argv(argv, 0)
+        num   = self.__argv(argv, 1)
+        setting = """
+        {
+            "settings": {
+                "index": {
+                    "number_of_replicas": "%s"
+                }
+                
+            }
+        }""" % num
+        self.__run("%s/_settings?pretty" % index, "PUT", data = setting)
+
+    def refresh_interval(self, argv = []):
+        """refresh-interval <index> num"""
+
+    def flush_threshold_size(self, argv = []):
+        """flush_threshold_size <index> num"""
+
+    def durability(self, argv = []):
+        """durability <index> [async|request]"""
+
+    def sync_interval(self, argv = []):
+        """sync-interval <index> num"""
+
+    def reroute(self, argv = []):
+        """reroute <index> node"""
+
+    def nuke(self, argv = []):
+        """nuke <index> <type>"""
+        index = self.__argv(argv, 0)
+        type = self.__argv(argv, 1)
+        self.__run("%s/%s/_delete_by_query?pretty" % (index, type), "POST",
+                   data = '{ "query": { "match_all": {} } }')
+
+    def copy_info(self, argv = []):
+        """copy-info <old_index> <new_index> <type>"""
+
+    def reindex(self, argv = []):
+        """reindex <old_index> <new_index>"""
+        old_index = self.__argv(argv, 0)
+        new_index = self.__argv(argv, 1)
+        reindex_cmd = """\
+            {
+                "source": {
+                    "index": "%s",
+                    "size": 5000
+                },
+                "dest": {
+                    "index": "%s",
+                    "version_type": "external"
+                },
+                "script": {
+                    "inline": "ctx._source.remove(\\"_id\\")"
+                }
+            }
+        """ % (old_index, new_index)
+        self.__run("_reindex?wait_for_completion=false&pretty",
+                   "POST", data = reindex_cmd)
+
+    def count(self, argv = []):
+        """count <index> <k|m|g>"""
+        index = self.__argv(argv, 0)
+        unit  = self.__argv(argv, 1, "b")
+        ep    = "%s/_count" % index
+        if unit in ["k", "K"]:
+            self.__run(ep, pipe = "jq -r '.count/1000'")
+        elif unit in ["m", "M"]:
+            self.__run(ep, pipe = "jq -r '.count/1000000'")
+        elif unit in ["g", "G"]:
+            self.__run(ep, pipe = "jq -r '.count/1000000000'")
+        else:
+            self.__run("%s/_count" % index, pipe = "jq -r '.count'")
+
+    def recovery_stats(self, argv = []):
+        """recovery-stats <index>"""
+        index = self.__argv(argv, 0)
+        self.__run("_cat/recovery/%s" % index)
+        
+    def flush(self, argv = []):
+        """flush <index>"""
+        index = self.__argv(argv, 0)
+        self.__run("%s/_flush?pretty" % index)
+
+    def include(self, argv = []):
+        """include <index> <tag> <bin>"""
+
+    def exclude(self, argv = []):
+        """exclude <index> <tag> <bin>"""
+
+    def dump(self, argv = []):
+        """dump <index>"""
+
+    def move_shard(self, argv = []):
+        """move-shard <index> <shard> <from_node> <to_node>"""
+
+    def cancel_move_shard(self, argv = []):
+        """cancel-move-shard <index> <shard> <to_node>"""
+
+    def move_primary_shard(self, argv = []):
+        """move-primary-shard <index> <shard> <to_node>"""
+
+    def random_shuffle(self, argv = []):
+        """random-shuffle <index> <seed>"""
+        index = self.__argv(argv, 0)
+        seed  = self.__argv(argv, 1)
+        size  = self.options["size"]
+        settings = """\
+            {
+                "query": {
+                    "function_score": {
+                        "functions": [
+                            {
+                                "random_score": {
+                                    "seed": "%s"
+                                }
+                            }
+                        ]
+                    }
+                },
+                "size": %s
+            }
+        """ % (seed, size)
+        self.__run("%s/_search" % index,
+                   data = settings, pipe = "jq -c .hits.hits[]")
+
+    def max_result_window(self, argv = []):
+        """max-result-window <index> <num>"""
+
+    def read_only_allow_delete(self, argv = []):
+        """read-only-allow-delete <index> [true|false]"""
+
+    def read_mode(self, argv = []):
+        """read-mode <index>"""
+
+    def write_mode(self, argv = []):
+        """write-mode <index>"""
+
+    # XXX
+    def index(self, argv = []):
+        """index <index> type field_1 field_2 ... < file"""
+        index = self.__argv(argv, 0)
+        type = self.__argv(argv, 1, "_doc")
+        fields = self.__argvs(argv, 2)
+        index_info = json.dumps({
+            "index": {
+                "_index": index,
+                "_type": type
+            }
+        })
+        #print(index_info)
+
+        count = 0
+        indexed = 0
+        payload = ""
+        malformed = 0
+        
+        for line in sys.stdin:
+            # Repalce ' with '' to make "curl -d" happy
+            line = line.replace("'", "''")
+            words = line.split("\n")
+            # Reject the ill-format data.
+            if len(words) != len(fields):
+                malformed +=1
+
+            # Fill the data.
+            data = {}
+            for i, field in enumerate(fields):
+                data[fields[i]] = words[i]
+            
+            payload += "%s\n%s\n" % (index_info, json.dumps(data))
+            print(payload)
+
+            count += 1
+            indexed += 1
+
+            if count == self.options["bulk_size"]:
+                self.__run("_bulk?pretty", "POST", data = payload)
+
+        if count != 0:
+            self.__run("_bulk?pretty", "POST", data = payload)
+
+    # XXX
+    # cat 100.json | parallel 'echo {} | es post foo/_doc'
+    def index_json(self, argv = []):
+        """index-json <index> < json-file"""
+        index = self.__argv(argv, 0)
+        type = "_doc"
+        for line in sys.stdin:
+            print(line)
+            self.__run("%s/%s" % (index, type), "POST", data = line)
+            
+    def stemmer_override(self, argv = []):
+        """stemmer-override <index> < file"""
+
+    def synonyms(self, argv = []):
+        """synonyms <index>         < file"""
+
+    def get(self, argv = []):
+        """get <index>              < file"""
+        index = self.__argv(argv, 0)
+        self.__run("%s/?pretty" % index, "GET", data = "@-")
+
+    def put(self, argv = []):
+        """put <index>              < file"""
+        index = self.__argv(argv, 0)
+        self.__run("%s/?pretty" % index, "PUT", data = "@-")
+
+    def post(self, argv = []):
+        """post <index>             < file"""
+        index = self.__argv(argv, 0)
+        self.__run("%s/?pretty" % index, "POST", data = "@-")
+
+    def search(self, argv = []):
+        """search <index>           < file"""
+        index = self.__argv(argv, 0)
+        size  = self.options["size"]
+        self.__run("%s/_search?pretty&size=%s" % (index, size), data = "@-")
+        
+    def ls(self, argv = []):
+        """ls"""
+        fields = [
+            "index",
+            "health",
+            "status",
+            "pri",
+            "rep",
+            "docs.count",
+            "docs.deleted",
+            "store.size",
+            "pri.store.size",
+        ]
+        pipe = "grep -v '^\.'"
+        self.__run("_cat/indices?v&h=%s" % ",".join(fields), pipe = pipe)
+
+    def cat(self, argv = []):
+        """cat [<index>]"""
+        index = self.__argv(argv, 0)
+        size  = self.options["size"]
+        self.__run("%s/_search?pretty&size=%s" % (index, size))
+        
+    def rm(self, argv = []):
+        """rm <index> [[<type> <id>] [<routing>]]"""
+        index   = self.__argv(argv, 0)
+        type    = self.__argv(argv, 1)
+        id      = urllib.quote_plus(self.__argv(argv, 2))
+        routing = self.__argv(argv, 3)
+        
+        path = index
+        if type:    path += "/%s" % type
+        if id:      path += "/%s" % id
+        path += "?pretty"
+        if routing: path += "&routing=%s" % routing
+        self.__run(path, "DELETE")
+
+    def grep(self, argv = []):
+        """grep <term> [<index>]"""
+        term = self.__argv(argv, 0)
+        index   = self.__argv(argv, 1)
+
+        # If it's nested query, use post, otherwise, use query string.
+        kv = term.split(":")
+        if len(kv) >= 2 and "." in kv[0]:
+            field = kv[0].split(".")
+            query = json.dumps({
+                "query": {
+                    "nested": {
+                        "path": field[0],
+                        "query": {
+                            "match": {
+                                kv[0]: kv[1]
+                            }
+                        }
+                    }
+                }
+            })
+            self.__run("%s/_search?pretty" % index, "POST", data = query)
+        else:
+            term  = urllib.quote_plus(term)
+            index = self.__argv(argv, 1)
+            size  = self.options["size"]
+            self.__run("%s/_search?q=%s&pretty&size=%s" % (index, term, size))
+
+# The main function.
+if __name__ == "__main__":
+    cli = argparse.ArgumentParser(description = "Elasticsearch Utility.")
+    cli.add_argument("-s", "--server", help = "ES server", default="localhost")
+    cli.add_argument("-p", "--port", help = "ES port", default = 9200)
+    cli.add_argument("-u", "--username", help = "Username")
+    cli.add_argument("-P", "--password", help = "Password")
+    cli.add_argument("-v", "--verbose", help = "Verbosity", action = "count")
+    cli.add_argument("-z", "--size", help = "Size", default = 30)
+    cli.add_argument("command", type = str, help = "Commands")
+    cli.add_argument("argv", type = str, nargs = "*", help = "Arguments")
+    args = cli.parse_args()
+
+    options = {
+        "host":      os.getenv("ES_SERVER", args.server),
+        "port":      os.getenv("ES_PORT", args.port),
+        "username":  os.getenv("ES_USERNAME", args.username),
+        "password":  os.getenv("ES_PASSWORD", args.password),
+        "verbose":   args.verbose,
+        "silent":    False,
+        "method":    "GET",
+        "v2":        False,
+        "size":      args.size,
+        "bulk_size": 1000
+    }
+
+    ES(options).run(args.command, args.argv)
