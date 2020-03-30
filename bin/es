@@ -333,6 +333,24 @@ class ES:
 
     def create_snapshot(self, argv = []):
         """create-snapshot  <repo-name> <snapshot-id> <indices>"""
+        repo = self.__argv(argv, 0)
+        snapshot_id = self.__argv(argv, 1, "_all")
+        indices = self.__argvs(argv, 2)
+        
+        if not indices:
+            # Create snapshots for all indices.
+            run("_snapshot/%s/%s?pretty" % (repo, snapshot_id),
+                method: "POST")
+        else:
+            # Restore snapshots for the given indices.
+            settings = '''
+                {
+                    "indices": "%s",
+                    "include_global_state": false
+                }
+            ''' % ",".join(indices)
+            self.__run("_snapshot/%s/%s/_restore?pretty" % (repo, snapshot_id),
+                       method = "PUT", data = settings)
 
     def restore_snapshot(self, argv = []):
         """restore-snapshot <repo-name> <snapshot-id> <indices>"""
@@ -364,6 +382,14 @@ class ES:
 
     def delete_snapshot(self, argv = []):
         """delete-snapshot  <repo-name> <snapshot-id>"""
+        repo = self.__argv(argv, 0)
+        snapshot_id = self.__argv(argv, 1)
+        if len(snapshot_id) == 0:
+            print("Please provide a snapshot_id!")
+            return
+
+        self.__run("_snapshot/%s/%s?pretty" % (repo, snapshot_id),
+                   method = "DELETE")
 
     def snapshot_info(self, argv = []):
         """snapshot-info    <repo-name> <snapshot-id>"""
@@ -379,12 +405,55 @@ class ES:
 
     def init_cluster_recovery(self, argv = []):
         """init-cluster-recovery <num>"""
-
+        num = self.__argv(argv, 0)
+        setting = '''
+            {
+                "transient": {
+                    "cluster": {
+                        "routing": {
+                            "allocation": {
+                                "node_initial_primaries_recoveries": "%s"
+                            }
+                        }
+                    }
+                }
+            }
+        ''' % num
+        self.__run("_cluster/settings?pretty", method = "PUT", data = setting)
+        
     def cluster_recovery(self, argv = []):
         """cluster-recovery <num>"""
+        num = self.__argv(argv, 0)
+        setting = '''
+            {
+                "transient": {
+                    "cluster": {
+                        "routing": {
+                            "allocation": {
+                                "node_concurrent_recoveries": "#{num}"
+                            }
+                        }
+                    }
+                }
+            }
+        ''' % num
+        self.__run("_cluster/settings?pretty", method = "PUT", data = setting)
 
     def index_recovery(self, argv = []):
         """index-recovery <num>"""
+        num = self.__argv(argv, 0)
+        setting = '''
+            {
+                "transient": {
+                    "indices": {
+                        "recovery": {
+                            "concurrent_streams": "#{num}"
+                        }
+                    }
+                }
+            }
+        ''' % num
+        self.__run("_cluster/settings?pretty", method = "PUT", data = setting)
 
     def explain_query(self, argv = []):
         """explain-query <index>"""
@@ -405,7 +474,17 @@ class ES:
 
     def watermark(self, argv = []):
         """watermark <low> <high>"""
-        # XXX
+        low = self.__argv(argv, 0)
+        high = self.__argv(argv, 1)
+        settings = '''
+            {
+                "transient": {
+                    "cluster.routing.allocation.disk.watermark.low": "%s",
+                    "cluster.routing.allocation.disk.watermark.high": "%s"
+                }
+            }
+        ''' % (low, high)
+        self.__run("_cluster/settings?pretty", method = "PUT", data = settings)
 
     def template(self, argv = []):
         """template <template-name>"""
