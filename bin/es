@@ -340,7 +340,7 @@ class ES:
         if not indices:
             # Create snapshots for all indices.
             run("_snapshot/%s/%s?pretty" % (repo, snapshot_id),
-                method: "POST")
+                method = "POST")
         else:
             # Restore snapshots for the given indices.
             settings = '''
