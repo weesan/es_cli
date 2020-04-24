@@ -833,7 +833,11 @@ class ES:
     def get(self, argv = []):
         """get <index>              < file"""
         index = self.__argv(argv, 0)
-        self.__run("%s/?pretty" % index, "GET", data = "@-")
+        id = self.__argv(argv, 1)
+        if id:
+            self.__run("%s/_doc/%s?pretty" % (index, id))
+        else:
+            self.__run("%s/?pretty" % index, "GET", data = "@-")
 
     def put(self, argv = []):
         """put <index>              < file"""
