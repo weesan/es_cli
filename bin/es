@@ -14,11 +14,11 @@ class ES:
         self.commands = {
             # Help.
             "help":                   self.help,
-            # Server EP info.         
+            # Server EP info.
             "server":                 self.server,
             "port":                   self.port,
             "url":                    self.url,
-            # Cluster info.           
+            # Cluster info.
             "health":                 self.health,
             "status":                 self.status,
             "info":                   self.info,
@@ -60,7 +60,7 @@ class ES:
             "license":                self.license,
             "watermark":              self.watermark,
             "template":               self.template,
-            # Node commands.          
+            # Node commands.
             "nodes":                  self.nodes,
             "nodes-stats":            self.nodes_stats,
             "nodes-info":             self.nodes_info,
@@ -74,7 +74,7 @@ class ES:
             "gc-bad":                 self.gc_bad,
             "hot-threads":            self.hot_threads,
             "segments-count":         self.segments_count,
-            ## Index commands.         
+            ## Index commands.
             "alias":                  self.alias,
             "unalias":                self.unalias,
             "stats":                  self.stats,
@@ -117,12 +117,16 @@ class ES:
             "put":                    self.put,
             "post":                   self.post,
             "search":                 self.search,
-            # Unix-like commands.     
+            # Unix-like commands.
             "ls":                     self.ls,
             "cat":                    self.cat,
             "rm":                     self.rm,
             "grep":                   self.grep,
         }
+
+    def __silent(self, on_off):
+        res, self.options["silent"] = self.options["silent"], True
+        return res
 
     def __url(self, argv = []):
         host, port = self.options["host"], self.options["port"]
@@ -132,7 +136,7 @@ class ES:
 
         if username and pw:
             return "http://%s:%s@%s:%s" % (username, pw, host, port)
-        else:    
+        else:
             return "http://%s:%s" % (host, port)
 
     def __argv(self, argv, i, default = ""):
@@ -140,14 +144,14 @@ class ES:
 
     def __argvs(self, argv, i, default = []):
         return argv[i:] if len(argv) >= (i + 1) else default
-    
+
     def __run(self, cmd, method = "GET", pipe = None, data = None):
         curl = "curl -s -X%s" % method
 
         # ESv6 or greater requires content-type header.
         if not self.options["v2"] and method in [ "POST", "PUT", "GET" ]:
             curl += " -H 'Content-Type: application/json'"
-                
+
         # Host, port and path.
         curl += " '%s/%s'" % (self.__url(), cmd)
 
@@ -188,7 +192,7 @@ class ES:
         print("Some examples:")
         for func in sorted(self.commands.values()):
             print("  es", func.__doc__)
-        
+
     def health(self, argv = []):
         """health [<green|yellow>] [<timeout>]"""
         if len(argv) == 0:
@@ -198,7 +202,7 @@ class ES:
             timeout = self.__argv(argv, 1, "30s")
             self.__run("_cluster/health?pretty" +
                        "&wait_for_status=%s&timeout=%s" % (wait, timeout))
-            
+
     def status(self, argv = []):
         """status"""
         self.__run("_cluster/health?pretty", pipe = "jq -r .status")
@@ -215,11 +219,11 @@ class ES:
     def server(self, argv = []):
         """server"""
         print(self.options["host"])
-        
+
     def port(self, argv = []):
         """port"""
         print(self.options["port"])
-        
+
     def url(self, argv = []):
         """url"""
         print(self.__url() + "/")
@@ -231,7 +235,7 @@ class ES:
     def aliases(self, argv = []):
         """aliases"""
         self.__run("_cat/aliases?v")
-        
+
     def plugins(self, argv = []):
         """plugins"""
         self.__run("_cat/plugins?v")
@@ -239,15 +243,15 @@ class ES:
     def tasks(self, argv = []):
         """tasks"""
         self.__run("_tasks?pretty")
-        
+
     def cluster_stats(self, argv = []):
         """cluster-stats"""
         self.__run("_cluster/stats?pretty")
-        
+
     def cluster_settings(self, argv = []):
         """cluster-settings"""
         self.__run("_cluster/settings?pretty")
-        
+
     def merge_stats(self, argv = []):
         """merge-stats"""
         self.__run("_stats/merge?pretty")
@@ -264,37 +268,37 @@ class ES:
         """cpu-load"""
         self.__run("_nodes/stats?pretty",
                    pipe = "jq -r '.nodes[] | [.name, .process.cpu.percent] | @tsv' | /usr/bin/sort -k2 -nr")
-        
+
     def reindex_status(self, argv = []):
         """reindex-status"""
         self.__run("_tasks?detailed=true&actions=*reindex&pretty")
-        
+
     def cancel_reindex(self, argv = []):
         """cancel-reindex"""
         self.__run("_tasks/_cancel?actions=*reindex&pretty", "POST")
-        
+
     def allocation(self, argv = []):
         """allocation"""
         self.__run("_cat/allocation?v")
-        
+
     def enable_allocation(self, argv = []):
         """enable-allocation <index> (to be implemented)"""
 
     def disable_allocation(self, argv = []):
         """disable-allocation <index> (to be implemented)"""
-        
+
     def enable_rebalance(self, argv = []):
         """enable-rebalance <index> (to be implemented)"""
 
     def throttle(self, argv = []):
         """throttle <none|merge> [<size>](to be implemented)"""
-        
+
     def search_queue_size(self, argv = []):
         """search-queue-size <int> (to be implemented)"""
-        
+
     def bulk_queue_size(self, argv = []):
         """bulk-queue-size <int> (to be implemented)"""
-        
+
     def index_queue_size(self, argv = []):
         """index-queue-size <int> (to be implemented)"""
 
@@ -311,17 +315,17 @@ class ES:
         client = self.__argv(argv, 2)
         base_path = self.__argv(argv, 3)
         settings = '''
-            {
-                "type": "gcs",
-                "settings": {
-                  "bucket": "%s",
-                  "client": "%s",
-                  "base_path": "%s",
-                  "compress": true,
-                  "max_snapshot_bytes_per_sec": "100mb",
-                  "max_restore_bytes_per_sec": "1024mb"
-                }
+        {
+            "type": "gcs",
+            "settings": {
+              "bucket": "%s",
+              "client": "%s",
+              "base_path": "%s",
+              "compress": true,
+              "max_snapshot_bytes_per_sec": "100mb",
+              "max_restore_bytes_per_sec": "1024mb"
             }
+        }
         ''' % (bucket, client, base_path)
         self.__run("_snapshot/%s?pretty" % repo,
                    method = "POST", data = settings)
@@ -336,7 +340,7 @@ class ES:
         repo = self.__argv(argv, 0)
         snapshot_id = self.__argv(argv, 1, "_all")
         indices = self.__argvs(argv, 2)
-        
+
         if not indices:
             # Create snapshots for all indices.
             run("_snapshot/%s/%s?pretty" % (repo, snapshot_id),
@@ -344,10 +348,10 @@ class ES:
         else:
             # Restore snapshots for the given indices.
             settings = '''
-                {
-                    "indices": "%s",
-                    "include_global_state": false
-                }
+            {
+                "indices": "%s",
+                "include_global_state": false
+            }
             ''' % ",".join(indices)
             self.__run("_snapshot/%s/%s/_restore?pretty" % (repo, snapshot_id),
                        method = "PUT", data = settings)
@@ -357,7 +361,7 @@ class ES:
         repo = self.__argv(argv, 0)
         snapshot_id = self.__argv(argv, 1, "_all")
         indices = self.__argvs(argv, 2)
-        
+
         if not indices:
             # Restore snapshots for all indices.
             self.__run("_snapshot/%s/%s/_restore?pretty" % (repo, snapshot_id),
@@ -365,17 +369,17 @@ class ES:
         else:
             # Restore snapshots for the given indices.
             settings = '''
-                {
-                    "indices": "%s",
-                    "include_global_state": false,
-                    "index_settings": {
-                        "index.number_of_replicas": 0,
-                        "index.routing.allocation.enable": "all"
-                    },
-                    "ignore_index_settings": [
-                        "index.routing.allocation.include.tag"
-                    ]
-                }
+            {
+                "indices": "%s",
+                "include_global_state": false,
+                "index_settings": {
+                    "index.number_of_replicas": 0,
+                    "index.routing.allocation.enable": "all"
+                },
+                "ignore_index_settings": [
+                    "index.routing.allocation.include.tag"
+                ]
+            }
             ''' % ",".join(indices)
             self.__run("_snapshot/%s/%s/_restore?pretty" % (repo, snapshot_id),
                        method = "POST", data = settings)
@@ -407,35 +411,35 @@ class ES:
         """init-cluster-recovery <num>"""
         num = self.__argv(argv, 0)
         setting = '''
-            {
-                "transient": {
-                    "cluster": {
-                        "routing": {
-                            "allocation": {
-                                "node_initial_primaries_recoveries": "%s"
-                            }
+        {
+            "transient": {
+                "cluster": {
+                    "routing": {
+                        "allocation": {
+                            "node_initial_primaries_recoveries": "%s"
                         }
                     }
                 }
             }
+        }
         ''' % num
         self.__run("_cluster/settings?pretty", method = "PUT", data = setting)
-        
+
     def cluster_recovery(self, argv = []):
         """cluster-recovery <num>"""
         num = self.__argv(argv, 0)
         setting = '''
-            {
-                "transient": {
-                    "cluster": {
-                        "routing": {
-                            "allocation": {
-                                "node_concurrent_recoveries": "#{num}"
-                            }
+        {
+            "transient": {
+                "cluster": {
+                    "routing": {
+                        "allocation": {
+                            "node_concurrent_recoveries": "#{num}"
                         }
                     }
                 }
             }
+        }
         ''' % num
         self.__run("_cluster/settings?pretty", method = "PUT", data = setting)
 
@@ -443,15 +447,15 @@ class ES:
         """index-recovery <num>"""
         num = self.__argv(argv, 0)
         setting = '''
-            {
-                "transient": {
-                    "indices": {
-                        "recovery": {
-                            "concurrent_streams": "#{num}"
-                        }
+        {
+            "transient": {
+                "indices": {
+                    "recovery": {
+                        "concurrent_streams": "#{num}"
                     }
                 }
             }
+        }
         ''' % num
         self.__run("_cluster/settings?pretty", method = "PUT", data = setting)
 
@@ -477,12 +481,12 @@ class ES:
         low = self.__argv(argv, 0)
         high = self.__argv(argv, 1)
         settings = '''
-            {
-                "transient": {
-                    "cluster.routing.allocation.disk.watermark.low": "%s",
-                    "cluster.routing.allocation.disk.watermark.high": "%s"
-                }
+        {
+            "transient": {
+                "cluster.routing.allocation.disk.watermark.low": "%s",
+                "cluster.routing.allocation.disk.watermark.high": "%s"
             }
+        }
         ''' % (low, high)
         self.__run("_cluster/settings?pretty", method = "PUT", data = settings)
 
@@ -512,12 +516,12 @@ class ES:
     def __nodes_stats_helper (self, node, field):
         pipe = "jq '.nodes[]|{name:.name, %s:.%s}'" % (field, field)
         self.nodes_stats(node, pipe = pipe)
-        
+
     def os(self, argv = []):
         """os [<node_name>]"""
         node = self.__argv(argv, 0)
         self.__nodes_stats_helper(node, "os")
-        
+
     def process(self, argv = []):
         """process [<node_name>]"""
         node = self.__argv(argv, 0)
@@ -543,7 +547,7 @@ class ES:
         pipe = \
             "jq -r '.nodes[]|[.host, .jvm.mem.heap_used_percent > %s] | @tsv'| sort -k2r -k1" % percent
         self.nodes_stats(node, pipe = pipe)
-  
+
     def gc_risk(self, argv = []):
         """gc-risk [<node_name>]"""
         node = self.__argv(argv, 0)
@@ -640,7 +644,7 @@ class ES:
                 "index": {
                     "number_of_replicas": "%s"
                 }
-                
+
             }
         }""" % num
         self.__run("%s/_settings?pretty" % index, "PUT", data = setting)
@@ -674,20 +678,20 @@ class ES:
         """reindex <old_index> <new_index>"""
         old_index = self.__argv(argv, 0)
         new_index = self.__argv(argv, 1)
-        reindex_cmd = """\
-            {
-                "source": {
-                    "index": "%s",
-                    "size": 5000
-                },
-                "dest": {
-                    "index": "%s",
-                    "version_type": "external"
-                },
-                "script": {
-                    "inline": "ctx._source.remove(\\"_id\\")"
-                }
+        reindex_cmd = """
+        {
+            "source": {
+                "index": "%s",
+                "size": 5000
+            },
+            "dest": {
+                "index": "%s",
+                "version_type": "external"
+            },
+            "script": {
+                "inline": "ctx._source.remove(\\"_id\\")"
             }
+        }
         """ % (old_index, new_index)
         self.__run("_reindex?wait_for_completion=false&pretty",
                    "POST", data = reindex_cmd)
@@ -710,7 +714,7 @@ class ES:
         """recovery-stats <index>"""
         index = self.__argv(argv, 0)
         self.__run("_cat/recovery/%s" % index)
-        
+
     def flush(self, argv = []):
         """flush <index>"""
         index = self.__argv(argv, 0)
@@ -724,6 +728,61 @@ class ES:
 
     def dump(self, argv = []):
         """dump <index>"""
+        index = self.__argv(argv, 0)
+        size  = self.options["size"]
+        query = """
+        {
+            "query": {
+                "match_all": {}
+            }
+        }
+        """
+
+        silent = self.__silent(True)
+
+        # Get the 1st batch.
+        res = self.__run("%s/_search?pretty&size=%s&scroll=1m" % (index, size),
+                         method = "POST", data = query)
+        data = json.loads(res)
+
+        # Return if no hits.
+        hits = data["hits"]["hits"]
+        if not hits:
+            self.__silent(silent)
+            return
+
+        # Get the scroll_id.
+        scroll_id = data["_scroll_id"]
+
+        # Output the 1st batch of the results.
+        for hit in hits:
+            del(hit["_score"])
+            print(json.dumps(hit))
+
+        # Construct for the next batches.
+        query = """
+        {
+            "scroll": "1m",
+            "scroll_id": "%s"
+        }
+        """ % scroll_id
+
+        while True:
+            # Get the next batch.
+            res = self.__run("_search/scroll?pretty",
+                             method = "POST", data = query)
+            data = json.loads(res)
+
+            # Break if no hits.
+            hits = data["hits"]["hits"]
+            if not hits: break
+
+            # Output the 2nd batch of the results.
+            for hit in hits:
+                del(hit["_score"])
+                print(json.dumps(hit))
+
+        self.__silent(silent)
 
     def move_shard(self, argv = []):
         """move-shard <index> <shard> <from_node> <to_node>"""
@@ -739,21 +798,21 @@ class ES:
         index = self.__argv(argv, 0)
         seed  = self.__argv(argv, 1)
         size  = self.options["size"]
-        settings = """\
-            {
-                "query": {
-                    "function_score": {
-                        "functions": [
-                            {
-                                "random_score": {
-                                    "seed": "%s"
-                                }
+        settings = """
+        {
+            "query": {
+                "function_score": {
+                    "functions": [
+                        {
+                            "random_score": {
+                                "seed": "%s"
                             }
-                        ]
-                    }
-                },
-                "size": %s
-            }
+                        }
+                    ]
+                }
+            },
+            "size": %s
+        }
         """ % (seed, size)
         self.__run("%s/_search" % index,
                    data = settings, pipe = "jq -c .hits.hits[]")
@@ -788,7 +847,7 @@ class ES:
         indexed = 0
         payload = ""
         malformed = 0
-        
+
         for line in sys.stdin:
             # Repalce ' with '' to make "curl -d" happy
             line = line.replace("'", "''")
@@ -801,7 +860,7 @@ class ES:
             data = {}
             for i, field in enumerate(fields):
                 data[fields[i]] = words[i]
-            
+
             payload += "%s\n%s\n" % (index_info, json.dumps(data))
             print(payload)
 
@@ -823,7 +882,7 @@ class ES:
         for line in sys.stdin:
             print(line)
             self.__run("%s/%s" % (index, type), "POST", data = line)
-            
+
     def stemmer_override(self, argv = []):
         """stemmer-override <index> < file"""
 
@@ -854,7 +913,7 @@ class ES:
         index = self.__argv(argv, 0)
         size  = self.options["size"]
         self.__run("%s/_search?pretty&size=%s" % (index, size), data = "@-")
-        
+
     def ls(self, argv = []):
         """ls"""
         fields = [
@@ -876,14 +935,14 @@ class ES:
         index = self.__argv(argv, 0)
         size  = self.options["size"]
         self.__run("%s/_search?pretty&size=%s" % (index, size))
-        
+
     def rm(self, argv = []):
         """rm <index> [[<type> <id>] [<routing>]]"""
         index   = self.__argv(argv, 0)
         type    = self.__argv(argv, 1)
         id      = urllib.quote_plus(self.__argv(argv, 2))
         routing = self.__argv(argv, 3)
-        
+
         path = index
         if type:    path += "/%s" % type
         if id:      path += "/%s" % id
