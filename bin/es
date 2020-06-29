@@ -33,6 +33,7 @@ class ES:
             "thread-pool":            self.thread_pool,
             "load":                   self.load,
             "cpu-load":               self.cpu_load,
+            "create-mappings":        self.create_mappings,
             "reindex-status":         self.reindex_status,
             "cancel-reindex":         self.cancel_reindex,
             "allocation":             self.allocation,
@@ -111,6 +112,7 @@ class ES:
             # Experiment commands.
             "index":                  self.index,
             "index-json":             self.index_json,
+            "index-dump":             self.index_dump,
             "stemmer-override":       self.stemmer_override,
             "synonyms":               self.synonyms,
             "get":                    self.get,
@@ -268,6 +270,27 @@ class ES:
         """cpu-load"""
         self.__run("_nodes/stats?pretty",
                    pipe = "jq -r '.nodes[] | [.name, .process.cpu.percent] | @tsv' | /usr/bin/sort -k2 -nr")
+
+    def create_mappings(self, argv = []):
+        """create-mappings < mappings-file"""
+        data = json.load(sys.stdin)
+        for index, value in data.items():
+            # Create the index, its mappings and settings in one go.
+            aliases  = value["aliases"] if "aliases" in value else {}
+            settings = value["settings"]["index"]
+            mappings = {
+                "aliases": aliases,
+                "settings": {
+                    "analysis": settings["analysis"],
+                    "index": {
+                        "number_of_shards": settings["number_of_shards"],
+                        "number_of_replicas": settings["number_of_replicas"]
+                    }
+                },
+                "mappings": value["mappings"]
+            }
+            self.__run("%s" % index,
+                       method = "PUT", data = json.dumps(mappings))
 
     def reindex_status(self, argv = []):
         """reindex-status"""
@@ -867,10 +890,11 @@ class ES:
             count += 1
             indexed += 1
 
-            if count == self.options["bulk_size"]:
+            if count % self.options["bulk_size"] == 0:
                 self.__run("_bulk?pretty", "POST", data = payload)
+                payload = ""
 
-        if count != 0:
+        if payload:
             self.__run("_bulk?pretty", "POST", data = payload)
 
     # XXX
@@ -882,6 +906,60 @@ class ES:
         for line in sys.stdin:
             print(line)
             self.__run("%s/%s" % (index, type), "POST", data = line)
+
+    # XXX: not working well when a lot of data.
+    def index_dump_single(self, argv = []):
+        """index-dump < dump-file"""
+        for line in sys.stdin:
+            data = json.loads(line)
+
+            id = data["_id"]
+            type = data["_type"]
+            index = data["_index"]
+            source = data["_source"]
+            self.__run("%s/%s/%s" % (index, type, id),
+                       method = "POST",
+                       data = json.dumps(source).replace("'", ""))
+
+    # Using bulk api to index.
+    def index_dump(self, argv = []):
+        """index-dump < dump-file"""
+
+        count = 0
+        payload = ""
+
+        for line in sys.stdin:
+            data = json.loads(line)
+
+            id = data["_id"]
+            type = data["_type"]
+            index = data["_index"]
+            source = data["_source"]
+
+            # XXX: store_sales could be huge and caused issue.  Remove
+            # it for now to make progress.
+            if "store_sales" in source: del(source["store_sales"])
+
+            index_info = {
+                "index": {
+                    "_index": index,
+                    "_type": type,
+                    "_id": id
+                }
+            }
+
+            # XXX: Remove ' for now to make progress.
+            payload += "%s\n%s\n" % (json.dumps(index_info),
+                                     json.dumps(source).replace("'", ""))
+
+            count += 1
+            if count % self.options["bulk_size"] == 0:
+                print(payload)
+                self.__run("_bulk?pretty", "POST", data = payload)
+                payload = ""
+
+        if payload:
+            self.__run("_bulk?pretty", "POST", data = payload)
 
     def stemmer_override(self, argv = []):
         """stemmer-override <index> < file"""
@@ -1001,7 +1079,7 @@ if __name__ == "__main__":
         "method":    "GET",
         "v2":        False,
         "size":      args.size,
-        "bulk_size": 1000
+        "bulk_size": 10
     }
 
     ES(options).run(args.command, args.argv)
