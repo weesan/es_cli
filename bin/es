@@ -661,7 +661,7 @@ class ES:
         """replicate <index> num"""
         index = self.__argv(argv, 0)
         num   = self.__argv(argv, 1)
-        setting = """
+        settings = """
         {
             "settings": {
                 "index": {
@@ -670,7 +670,7 @@ class ES:
 
             }
         }""" % num
-        self.__run("%s/_settings?pretty" % index, "PUT", data = setting)
+        self.__run("%s/_settings?pretty" % index, "PUT", data = settings)
 
     def refresh_interval(self, argv = []):
         """refresh-interval <index> num"""
@@ -680,6 +680,19 @@ class ES:
 
     def durability(self, argv = []):
         """durability <index> [async|request]"""
+        index = self.__argv(argv, 0)
+        mode  = self.__argv(argv, 1)
+        settings = """
+        {
+            "settings": {
+                "index": {
+                    "translog.durability": "%s"
+                }
+
+            }
+        }""" % mode
+        self.__run("%s/_settings?pretty" % index, "PUT", data = settings)
+
 
     def sync_interval(self, argv = []):
         """sync-interval <index> num"""
