@@ -159,7 +159,14 @@ class ES:
 
         # Data
         if data:
-            curl += " -d '%s'" % data
+            # When the data contains ', we need to switch to " to wrap
+            # the data.  In which case, we need to escape all the " in
+            # the data.  Otherwise, we simply wrap the data with '.
+            if data.find("'") != -1:
+                data = data.replace('"', '\\"')
+                curl += " -d \"%s\"" % data
+            else:
+                curl += " -d '%s'" % data
 
         # Piping for specific info.
         if pipe:
@@ -960,10 +967,7 @@ class ES:
                     "_id": id
                 }
             }
-
-            # XXX: Remove ' for now to make progress.
-            payload += "%s\n%s\n" % (json.dumps(index_info),
-                                     json.dumps(source).replace("'", ""))
+            payload += "%s\n%s\n" % (json.dumps(index_info), json.dumps(source))
 
             count += 1
             if count % self.options["bulk_size"] == 0:
