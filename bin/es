@@ -700,12 +700,32 @@ class ES:
         }""" % mode
         self.__run("%s/_settings?pretty" % index, "PUT", data = settings)
 
-
     def sync_interval(self, argv = []):
         """sync-interval <index> num"""
 
     def reroute(self, argv = []):
-        """reroute <index> node"""
+        """reroute <index> <node>"""
+        index = self.__argv(argv, 0)
+        node  = self.__argv(argv, 1)
+        settings = """
+        {
+            "commands": [
+                {
+                    "allocate": {
+                        "index": "%s",
+                        "shard": 0,
+                        "node": "%s",
+                        "allow_primary": 1
+                    }
+                }
+            ]
+        }""" % (index, node)
+
+        # Not working yet.
+        #self.__run("_cluster/reroute?pretty", "POST", data = settings)
+
+        # Temp fix.
+        self.__run("_cluster/reroute?retry_failed=true&pretty", "POST")
 
     def nuke(self, argv = []):
         """nuke <index> <type>"""
