@@ -124,6 +124,8 @@ class ES:
             "cat":                    self.cat,
             "rm":                     self.rm,
             "grep":                   self.grep,
+            # Delete a doc
+            "delete":                 self.delete,
         }
 
     def __silent(self, on_off):
@@ -1092,6 +1094,13 @@ class ES:
             index = self.__argv(argv, 1)
             size  = self.options["size"]
             self.__run("%s/_search?q=%s&pretty&size=%s" % (index, term, size))
+
+    def delete(self, argv = []):
+        """delete <index> <id> <type>"""
+        index = self.__argv(argv, 0)
+        id    = self.__argv(argv, 1)
+        type  = self.__argv(argv, 2, "_doc")
+        self.__run("%s/%s/%s" % (index, type, id), "DELETE")
 
 # The main function.
 if __name__ == "__main__":
