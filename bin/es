@@ -315,9 +315,53 @@ class ES:
 
     def enable_allocation(self, argv = []):
         """enable-allocation <index> (to be implemented)"""
+        index = self.__argv(argv, 0)
+
+        if index:
+            settings = '''
+            {
+                "index": {
+                    "routing.allocation.enable": "all"
+                }
+            }
+            '''
+            self.__run("%s/_settings?pretty" % index,
+                       method = "PUT", data = settings)
+        else:
+            settings = '''
+            {
+                "transient": {
+                    "cluster.routing.allocation.enable": "all"
+                }
+            }
+            '''
+            self.__run("_cluster/settings?pretty",
+                       method = "PUT", data = settings)
 
     def disable_allocation(self, argv = []):
         """disable-allocation <index> (to be implemented)"""
+        index = self.__argv(argv, 0)
+
+        if index:
+            settings = '''
+            {
+                "index": {
+                    "routing.allocation.enable": "none"
+                }
+            }
+            '''
+            self.__run("%s/_settings?pretty" % index,
+                       method = "PUT", data = settings)
+        else:
+            settings = '''
+                {
+                    "transient": {
+                        "cluster.routing.allocation.enable": "none"
+                    }
+                }
+            '''
+            self.__run("_cluster/settings?pretty",
+                       method = "PUT", data = settings)
 
     def enable_rebalance(self, argv = []):
         """enable-rebalance <index> (to be implemented)"""
@@ -466,7 +510,7 @@ class ES:
                 "cluster": {
                     "routing": {
                         "allocation": {
-                            "node_concurrent_recoveries": "#{num}"
+                            "node_concurrent_recoveries": "%s"
                         }
                     }
                 }
@@ -475,6 +519,7 @@ class ES:
         ''' % num
         self.__run("_cluster/settings?pretty", method = "PUT", data = setting)
 
+    # Not working for new ES.
     def index_recovery(self, argv = []):
         """index-recovery <num>"""
         num = self.__argv(argv, 0)
@@ -483,7 +528,7 @@ class ES:
             "transient": {
                 "indices": {
                     "recovery": {
-                        "concurrent_streams": "#{num}"
+                        "concurrent_streams": "%s"
                     }
                 }
             }
@@ -683,6 +728,18 @@ class ES:
 
     def refresh_interval(self, argv = []):
         """refresh-interval <index> num"""
+        index = self.__argv(argv, 0)
+        interval = self.__argv(argv, 1)
+        settings = """
+        {
+            "settings": {
+                "index": {
+                    "refresh_interval": "%s"
+                }
+
+            }
+        }""" % interval
+        self.__run("%s/_settings?pretty" % index, "PUT", data = settings)
 
     def flush_threshold_size(self, argv = []):
         """flush_threshold_size <index> num"""
@@ -726,7 +783,7 @@ class ES:
         # Not working yet.
         #self.__run("_cluster/reroute?pretty", "POST", data = settings)
 
-        # Temp fix.
+        # XXX: Temp fix.
         self.__run("_cluster/reroute?retry_failed=true&pretty", "POST")
 
     def nuke(self, argv = []):
@@ -778,7 +835,7 @@ class ES:
     def recovery_stats(self, argv = []):
         """recovery-stats <index>"""
         index = self.__argv(argv, 0)
-        self.__run("_cat/recovery/%s" % index)
+        self.__run("_cat/recovery/%s?h=i,s,t,st,snode,shost,tnode,thost,f,fp,b,bp" % index)
 
     def flush(self, argv = []):
         """flush <index>"""
@@ -890,6 +947,19 @@ class ES:
 
     def read_mode(self, argv = []):
         """read-mode <index>"""
+        index = self.__argv(argv, 0)
+        mode  = self.__argv(argv, 1)
+        settings = """
+        {
+            "settings": {
+                "index": {
+                    "translog.durability": "request"
+                }
+
+            }
+        }"""
+        self.__run("%s/_settings?pretty" % index, "PUT", data = settings)
+
 
     def write_mode(self, argv = []):
         """write-mode <index>"""
