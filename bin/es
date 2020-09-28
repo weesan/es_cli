@@ -165,10 +165,10 @@ class ES:
             # the data.  In which case, we need to escape all the " in
             # the data.  Otherwise, we simply wrap the data with '.
             if data.find("'") != -1:
-                data = data.replace('"', '\\"')
-                curl += " -d \"%s\"" % data
-            else:
-                curl += " -d '%s'" % data
+                data = data.replace("'", "\\'")
+
+            # Use $'' for bash string so that \' would work inside it.
+            curl += " -d $'%s'" % data
 
         # Piping for specific info.
         if pipe:
@@ -978,8 +978,6 @@ class ES:
         })
         #print(index_info)
 
-        count = 0
-        indexed = 0
         payload = ""
         malformed = 0
 
@@ -996,28 +994,80 @@ class ES:
             for i, field in enumerate(fields):
                 data[fields[i]] = words[i]
 
-            payload += "%s\n%s\n" % (index_info, json.dumps(data))
-            print(payload)
-
-            count += 1
-            indexed += 1
-
-            if count % self.options["bulk_size"] == 0:
+            index_data = "%s\n%s\n" % (index_info, json.dumps(data))
+                
+            if len(index_data) + len(payload) >= self.options["max_bulk_bytes"]:
                 self.__run("_bulk?pretty", "POST", data = payload)
                 payload = ""
+
+            payload += index_data
 
         if payload:
             self.__run("_bulk?pretty", "POST", data = payload)
 
-    # XXX
     # cat 100.json | parallel 'echo {} | es post foo/_doc'
-    def index_json(self, argv = []):
-        """index-json <index> < json-file"""
+    def index_json_single(self, argv = []):
+        """index-json-single <index> < json-file"""
+
         index = self.__argv(argv, 0)
         type = "_doc"
         for line in sys.stdin:
             print(line)
             self.__run("%s/%s" % (index, type), "POST", data = line)
+
+    # Use bulk API to index a json input.
+    def index_json(self, argv = []):
+        """index-json <index> < json-file"""
+
+        index = self.__argv(argv, 0)
+        payload = ""
+
+        for line in sys.stdin:
+            data = json.loads(line)
+            _id = data["id"]
+            _type = "_doc"
+            _index = index
+
+            # Remove id from the data since we have _id.
+            del(data["id"])
+            
+            # Use the index in the data if provided.
+            if "index" in data:
+                _index =  data["index"]
+                del(data["index"])
+
+            index_info = {
+                "index": {
+                    "_index": _index,
+                    "_type": _type,
+                    "_id": _id
+                }
+            }
+            index_data = "%s\n%s\n" % (json.dumps(index_info), json.dumps(data))
+
+            # XXX: store_sales could be huge and caused issue.  If so,
+            # remove it for now to make progress.
+            if len(index_data) >= self.options["max_bulk_bytes"]:
+                if "sale" in data:
+                    del(data["sale"])
+                # Regeneate smaller index_data.
+                index_data = "%s\n%s\n" % (json.dumps(index_info), json.dumps(data))
+
+            if len(index_data) + len(payload) >= self.options["max_bulk_bytes"]:
+                try:
+                    self.__run("_bulk?pretty", "POST", data = payload)
+                except Exception as err:
+                    print(json.dumps(data))
+                    print(len(index_data), len(payload))
+                    print("id:", _id)
+                    raise(err)
+
+                payload = ""
+            
+            payload += index_data
+
+        if payload:
+            self.__run("_bulk?pretty", "POST", data = payload)
 
     # XXX: not working well when a lot of data.
     def index_dump_single(self, argv = []):
@@ -1037,7 +1087,6 @@ class ES:
     def index_dump(self, argv = []):
         """index-dump < dump-file"""
 
-        count = 0
         payload = ""
 
         for line in sys.stdin:
@@ -1059,13 +1108,13 @@ class ES:
                     "_id": id
                 }
             }
-            payload += "%s\n%s\n" % (json.dumps(index_info), json.dumps(source))
+            index_data = "%s\n%s\n" % (json.dumps(index_info), json.dumps(source))
 
-            count += 1
-            if count % self.options["bulk_size"] == 0:
-                print(payload)
+            if len(index_data) + len(payload) >= self.options["max_bulk_bytes"]:
                 self.__run("_bulk?pretty", "POST", data = payload)
                 payload = ""
+            
+            payload += index_data
 
         if payload:
             self.__run("_bulk?pretty", "POST", data = payload)
@@ -1186,16 +1235,16 @@ if __name__ == "__main__":
     args = cli.parse_args()
 
     options = {
-        "host":      os.getenv("ES_SERVER", args.server),
-        "port":      os.getenv("ES_PORT", args.port),
-        "username":  os.getenv("ES_USERNAME", args.username),
-        "password":  os.getenv("ES_PASSWORD", args.password),
-        "verbose":   args.verbose,
-        "silent":    False,
-        "method":    "GET",
-        "v2":        False,
-        "size":      args.size,
-        "bulk_size": 10
+        "host":           os.getenv("ES_SERVER", args.server),
+        "port":           os.getenv("ES_PORT", args.port),
+        "username":       os.getenv("ES_USERNAME", args.username),
+        "password":       os.getenv("ES_PASSWORD", args.password),
+        "verbose":        args.verbose,
+        "silent":         False,
+        "method":         "GET",
+        "v2":             False,
+        "size":           args.size,
+        "max_bulk_bytes": 100000
     }
 
     ES(options).run(args.command, args.argv)
