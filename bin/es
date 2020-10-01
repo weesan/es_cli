@@ -283,9 +283,11 @@ class ES:
                    pipe = "jq -r '.nodes[] | [.name, .process.cpu.percent] | @tsv' | /usr/bin/sort -k2 -nr")
 
     def create_mappings(self, argv = []):
-        """create-mappings < mappings-file"""
+        """create-mappings [index] < mappings-file"""
+        index = self.__argv(argv, 0, None)
         data = json.load(sys.stdin)
-        for index, value in data.items():
+
+        for _index, value in data.items():
             # Create the index, its mappings and settings in one go.
             aliases  = value["aliases"] if "aliases" in value else {}
             settings = value["settings"]["index"]
@@ -300,7 +302,7 @@ class ES:
                 },
                 "mappings": value["mappings"]
             }
-            self.__run("%s" % index,
+            self.__run("%s" % index if index else _index,
                        method = "PUT", data = json.dumps(mappings))
 
     def reindex_status(self, argv = []):
@@ -997,7 +999,7 @@ class ES:
                 data[fields[i]] = words[i]
 
             index_data = "%s\n%s\n" % (index_info, json.dumps(data))
-                
+
             if len(index_data) + len(payload) >= self.options["max_bulk_bytes"]:
                 self.__run("_bulk?pretty", "POST", data = payload)
                 payload = ""
@@ -1021,7 +1023,7 @@ class ES:
     def index_json(self, argv = []):
         """index-json <index> < json-file"""
 
-        index = self.__argv(argv, 0)
+        index = self.__argv(argv, 0, None)
         payload = ""
 
         for line in sys.stdin:
@@ -1032,10 +1034,12 @@ class ES:
 
             # Remove id from the data since we have _id.
             del(data["id"])
-            
-            # Use the index in the data if provided.
+
+            # Don't need to index the index field if provided.
             if "index" in data:
-                _index =  data["index"]
+                # Use the index in the data if not provided from CLI.
+                if not _index:
+                    _index =  data["index"]
                 del(data["index"])
 
             index_info = {
@@ -1065,7 +1069,7 @@ class ES:
                     raise(err)
 
                 payload = ""
-            
+
             payload += index_data
 
         if payload:
@@ -1115,7 +1119,7 @@ class ES:
             if len(index_data) + len(payload) >= self.options["max_bulk_bytes"]:
                 self.__run("_bulk?pretty", "POST", data = payload)
                 payload = ""
-            
+
             payload += index_data
 
         if payload:
