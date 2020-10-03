@@ -373,8 +373,18 @@ class ES:
     def throttle(self, argv = []):
         """throttle <none|merge> [<size>](to be implemented)"""
 
+    # Not working >= ES6 since those needs to be in the .yml config file.
     def search_queue_size(self, argv = []):
-        """search-queue-size <int> (to be implemented)"""
+        """search-queue-size <int>"""
+        size = self.__argv(argv, 0)
+        settings = '''
+            {
+                 "transient": {
+                     "threadpool.search.queue_size" : "%s"
+                }
+            }
+        ''' % size
+        self.__run("_cluster/settings?pretty", method = "PUT", data = settings)
 
     def bulk_queue_size(self, argv = []):
         """bulk-queue-size <int> (to be implemented)"""
@@ -527,7 +537,7 @@ class ES:
     def index_recovery(self, argv = []):
         """index-recovery <num>"""
         num = self.__argv(argv, 0)
-        setting = '''
+        settings = '''
         {
             "transient": {
                 "indices": {
@@ -538,7 +548,7 @@ class ES:
             }
         }
         ''' % num
-        self.__run("_cluster/settings?pretty", method = "PUT", data = setting)
+        self.__run("_cluster/settings?pretty", method = "PUT", data = settings)
 
     def explain_query(self, argv = []):
         """explain-query <index>"""
