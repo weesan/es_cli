@@ -61,6 +61,7 @@ class ES:
             "license":                self.license,
             "watermark":              self.watermark,
             "template":               self.template,
+            "delete-template":        self.delete_template,
             # Node commands.
             "nodes":                  self.nodes,
             "nodes-stats":            self.nodes_stats,
@@ -585,6 +586,11 @@ class ES:
         """template <template-name>"""
         template_name = self.__argv(argv, 0)
         self.__run("_template/%s" % template_name)
+
+    def delete_template(self, argv = []):
+        """delete-template <template-name>"""
+        template_name = self.__argv(argv, 0)
+        self.__run("_template/%s" % template_name, method = "DELETE")
 
     def nodes(self, argv = []):
         """nodes"""
