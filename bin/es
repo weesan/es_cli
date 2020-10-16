@@ -39,6 +39,7 @@ class ES:
             "allocation":             self.allocation,
             "enable-allocation":      self.enable_allocation,
             "disable-allocation":     self.disable_allocation,
+            "exclude-allocation":     self.exclude_allocation,
             "enable-rebalance":       self.enable_rebalance,
             "throttle":               self.throttle,
             "search-queue-size":      self.search_queue_size,
@@ -319,7 +320,7 @@ class ES:
         self.__run("_cat/allocation?v")
 
     def enable_allocation(self, argv = []):
-        """enable-allocation <index> (to be implemented)"""
+        """enable-allocation <index>"""
         index = self.__argv(argv, 0)
 
         if index:
@@ -344,7 +345,7 @@ class ES:
                        method = "PUT", data = settings)
 
     def disable_allocation(self, argv = []):
-        """disable-allocation <index> (to be implemented)"""
+        """disable-allocation <index>"""
         index = self.__argv(argv, 0)
 
         if index:
@@ -367,6 +368,20 @@ class ES:
             '''
             self.__run("_cluster/settings?pretty",
                        method = "PUT", data = settings)
+
+    # To exclude certain nodes to be used for shards allocation.
+    def exclude_allocation(self, argv = []):
+        """exclude-allocation <node-1>...<node-n>|none"""
+        nodes = self.__argvs(argv, 0)
+
+        settings = '''
+        {
+            "transient": {
+                "cluster.routing.allocation.exclude._name": "%s"
+            }
+        }
+        ''' % ",".join(nodes)
+        self.__run("_cluster/settings?pretty", method = "PUT", data = settings)
 
     def enable_rebalance(self, argv = []):
         """enable-rebalance <index> (to be implemented)"""
