@@ -229,7 +229,21 @@ class ES:
 
     def shards(self, argv = []):
         """shards"""
-        self.__run("_cat/shards?v&h=index,shard,prirep,state,docs,store,ip,node,unassigned.reason")
+        option = self.options["option"] or "index"
+        fields = [
+            "index",
+            "shard",
+            "prirep",
+            "state",
+            "docs",
+            "store",
+            "ip",
+            "node",
+            "unassigned.reason",
+        ]
+        pipe = "grep -v '^\.'"
+        self.__run("_cat/shards?v&h=%s&s=%s" % (",".join(fields), option),
+                   pipe = pipe)
 
     def server(self, argv = []):
         """server"""
