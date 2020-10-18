@@ -41,6 +41,7 @@ class ES:
             "disable-allocation":     self.disable_allocation,
             "exclude-allocation":     self.exclude_allocation,
             "enable-rebalance":       self.enable_rebalance,
+            "set-disk-allocation":    self.set_disk_allocation,
             "throttle":               self.throttle,
             "search-queue-size":      self.search_queue_size,
             "bulk-queue-size":        self.bulk_queue_size,
@@ -403,6 +404,20 @@ class ES:
 
     def enable_rebalance(self, argv = []):
         """enable-rebalance <index> (to be implemented)"""
+
+    def set_disk_allocation(self, argv = []):
+        """set-disk-allocation <low> <high>"""
+        low  = self.__argv(argv, 0, "85")
+        high = self.__argv(argv, 1, "90")
+        settings = '''
+        {
+            "transient": {
+                "cluster.routing.allocation.disk.watermark.low": "%s%%",
+                "cluster.routing.allocation.disk.watermark.high": "%s%%"
+            }
+        }
+        ''' % (low, high)
+        self.__run("_cluster/settings?pretty", method = "PUT", data = settings)
 
     def throttle(self, argv = []):
         """throttle <none|merge> [<size>](to be implemented)"""
@@ -1267,7 +1282,7 @@ class ES:
         self.__run("%s/_search?pretty&size=%s" % (index, size), data = "@-")
 
     def ls(self, argv = []):
-        """ls"""
+        """ls [-o <index|docs|size>]"""
         fields = [
             "index",
             "health",
@@ -1280,7 +1295,13 @@ class ES:
             "pri.store.size",
         ]
         pipe = "grep -v '^\.'"
-        self.__run("_cat/indices?v&h=%s" % ",".join(fields), pipe = pipe)
+        option = self.options["option"] or "index"
+        if option == "docs":
+            option = "docs.count"
+        elif option == "size":
+            option = "pri.store.size"
+        self.__run("_cat/indices?v&h=%s&s=%s" % (",".join(fields), option),
+                   pipe = pipe)
 
     def cat(self, argv = []):
         """cat [<index>]"""
