@@ -1282,7 +1282,8 @@ class ES:
         self.__run("%s/_search?pretty&size=%s" % (index, size), data = "@-")
 
     def ls(self, argv = []):
-        """ls [-o <index|docs|size>]"""
+        """ls [index] [-o <index|docs|size>]]"""
+        index = self.__argv(argv, 0)
         fields = [
             "index",
             "health",
@@ -1294,7 +1295,10 @@ class ES:
             "store.size",
             "pri.store.size",
         ]
-        pipe = "grep -v '^\.'"
+        if index:
+            pipe = "grep '%s'" % index
+        else:
+            pipe = "grep -v '^\.'"
         option = self.options["option"] or "index"
         if option == "docs":
             option = "docs.count"
