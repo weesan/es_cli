@@ -316,8 +316,12 @@ class ES:
         self.__run("_tasks/_cancel?actions=*reindex&pretty", "POST")
 
     def allocation(self, argv = []):
-        """allocation"""
-        self.__run("_cat/allocation?v")
+        """allocation [-o disk]"""
+        disk = self.__argv(argv, 0)
+        if self.options["option"] == "disk":
+            self.__run("_cat/allocation?v&s=disk.percent,node")
+        else:
+            self.__run("_cat/allocation?v&s=node")
 
     def enable_allocation(self, argv = []):
         """enable-allocation <index>"""
@@ -608,8 +612,15 @@ class ES:
         self.__run("_template/%s" % template_name, method = "DELETE")
 
     def nodes(self, argv = []):
-        """nodes"""
-        self.__run("_cat/nodes?v")
+        """nodes [-o [heap|ram|cpu]]"""
+        if self.options["option"] == "heap":
+            self.__run("_cat/nodes?v&s=heapPercent")
+        elif self.options["option"] == "ram":
+            self.__run("_cat/nodes?v&s=ramPercent")
+        elif self.options["option"] == "cpu":
+            self.__run("_cat/nodes?v&s=cpu")
+        else:
+            self.__run("_cat/nodes?v&s=name")
 
     def nodes_stats(self, argv = [], pipe = None):
         """nodes-stats"""
@@ -943,12 +954,66 @@ class ES:
 
     def move_shard(self, argv = []):
         """move-shard <index> <shard> <from_node> <to_node>"""
+        index     = self.__argv(argv, 0)
+        shard     = self.__argv(argv, 1)
+        from_node = self.__argv(argv, 2)
+        to_node   = self.__argv(argv, 3)
+        settings = """
+        {
+            "commands": [
+                {
+                    "move": {
+                        "index": "%s",
+                        "shard": "%s",
+                        "from_node": "%s",
+                        "to_node": "%s"
+                    }
+                }
+            ]
+        }
+        """ % (index, shard, from_node, to_node)
+        self.__run("_cluster/reroute?pretty", method = "POST", data = settings)
 
     def cancel_move_shard(self, argv = []):
         """cancel-move-shard <index> <shard> <to_node>"""
+        index     = self.__argv(argv, 0)
+        shard     = self.__argv(argv, 1)
+        to_node   = self.__argv(argv, 2)
+        settings = """
+        {
+            "commands": [
+                {
+                    "cancel": {
+                        "index": "%s",
+                        "shard": "%s",1
+                        "node": "%s"
+                    }
+                }
+            ]
+        }
+        """ % (index, shard, to_node)
+        self.__run("_cluster/reroute?pretty", method = "POST", data = settings)
 
     def move_primary_shard(self, argv = []):
         """move-primary-shard <index> <shard> <to_node>"""
+        index     = self.__argv(argv, 0)
+        shard     = self.__argv(argv, 1)
+        to_node   = self.__argv(argv, 2)
+        settings = """
+        {
+            "commands": [
+                {
+                    "allocate_empty_primary": {
+                        "index": "%s",
+                        "shard": "%s",1
+                        "node":  "%s",
+                        "accept_data_loss": False
+                    }
+                }
+            ]
+        }
+        """ % (index, shard, to_node)
+        self.__run("_cluster/reroute?pretty", method = "POST", data = settings)
 
     def random_shuffle(self, argv = []):
         """random-shuffle <index> <seed>"""
@@ -1261,6 +1326,7 @@ class ES:
 # The main function.
 if __name__ == "__main__":
     cli = argparse.ArgumentParser(description = "Elasticsearch Utility.")
+    cli.add_argument("-o", "--option", help = "Option")
     cli.add_argument("-s", "--server", help = "ES server", default="localhost")
     cli.add_argument("-p", "--port", help = "ES port", default = 9200)
     cli.add_argument("-u", "--username", help = "Username")
@@ -1281,7 +1347,8 @@ if __name__ == "__main__":
         "method":         "GET",
         "v2":             False,
         "size":           args.size,
-        "max_bulk_bytes": 100000
+        "max_bulk_bytes": 100000,
+        "option":         args.option,
     }
 
     ES(options).run(args.command, args.argv)
