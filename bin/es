@@ -229,8 +229,14 @@ class ES:
         self.__run("%s?pretty" % index)
 
     def shards(self, argv = []):
-        """shards"""
-        option = self.options["option"] or "index"
+        """shards [<index>] [-o <index|shard|state|docs|ip|node>]"""
+        index = self.__argv(argv, 0)
+
+        if index: index += "*"
+        pipe = None if index else "grep -v '^\.'"
+
+        sort = self.options["option"] or "index"
+
         fields = [
             "index",
             "shard",
@@ -242,9 +248,8 @@ class ES:
             "node",
             "unassigned.reason",
         ]
-        pipe = "grep -v '^\.'"
-        self.__run("_cat/shards?v&h=%s&s=%s" % (",".join(fields), option),
-                   pipe = pipe)
+        self.__run("_cat/shards/%s?v&s=%s&h=%s" % \
+                   (index, sort, ",".join(fields)), pipe = pipe)
 
     def server(self, argv = []):
         """server"""
@@ -633,7 +638,7 @@ class ES:
     def template(self, argv = []):
         """template <template-name>"""
         template_name = self.__argv(argv, 0)
-        self.__run("_template/%s" % template_name)
+        self.__run("_template/%s" % template_name, pipe = "jq")
 
     def delete_template(self, argv = []):
         """delete-template <template-name>"""
@@ -1282,8 +1287,18 @@ class ES:
         self.__run("%s/_search?pretty&size=%s" % (index, size), data = "@-")
 
     def ls(self, argv = []):
-        """ls [index] [-o <index|docs|size>]]"""
+        """ls [<index>] [-o <index|docs|size>]]"""
         index = self.__argv(argv, 0)
+
+        if index: index += "*"
+        pipe = None if index else "grep -v '^\.'"
+
+        sort = self.options["option"] or "index"
+        if sort == "docs":
+            sort = "docs.count"
+        elif sort == "size":
+            sort = "pri.store.size"
+
         fields = [
             "index",
             "health",
@@ -1295,17 +1310,8 @@ class ES:
             "store.size",
             "pri.store.size",
         ]
-        if index:
-            pipe = "grep '%s'" % index
-        else:
-            pipe = "grep -v '^\.'"
-        option = self.options["option"] or "index"
-        if option == "docs":
-            option = "docs.count"
-        elif option == "size":
-            option = "pri.store.size"
-        self.__run("_cat/indices?v&h=%s&s=%s" % (",".join(fields), option),
-                   pipe = pipe)
+        self.__run("_cat/indices/%s?v&s=%s&h=%s" % \
+                   (index, sort, ",".join(fields)), pipe = pipe)
 
     def cat(self, argv = []):
         """cat [<index>]"""
