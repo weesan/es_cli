@@ -1364,7 +1364,7 @@ class ES:
                     "nested": {
                         "path": field[0],
                         "query": {
-                            "match": {
+                            "match_bool_prefix": {
                                 kv[0]: kv[1]
                             }
                         }
