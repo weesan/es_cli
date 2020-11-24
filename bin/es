@@ -112,6 +112,7 @@ class ES:
             "read-only-allow-delete": self.read_only_allow_delete,
             "read-mode":              self.read_mode,
             "write-mode":             self.write_mode,
+            "exists":                 self.exists,
             # Experiment commands.
             "index":                  self.index,
             "index-json":             self.index_json,
@@ -1097,6 +1098,22 @@ class ES:
 
     def write_mode(self, argv = []):
         """write-mode <index>"""
+
+    # XXX: Not yet working.
+    def exists(self, argv = []):
+        """exists <index> <field>"""
+        index = self.__argv(argv, 0)
+        field = self.__argv(argv, 1)
+        query = """
+        {
+            "query": {
+                "exists": {
+                    "field": "%s"
+                }
+
+            }
+        }""" % field
+        self.__run("%s/_search?pretty" % index, data = query)
 
     # XXX
     def index(self, argv = []):
