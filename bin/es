@@ -1099,7 +1099,6 @@ class ES:
     def write_mode(self, argv = []):
         """write-mode <index>"""
 
-    # XXX: Not yet working.
     def exists(self, argv = []):
         """exists <index> <field>"""
         index = self.__argv(argv, 0)
