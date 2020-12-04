@@ -14,6 +14,8 @@ class ES:
         self.commands = {
             # Help.
             "help":                   self.help,
+            # Admin.
+            "passwd":                 self.passwd,
             # Server EP info.
             "server":                 self.server,
             "port":                   self.port,
@@ -209,6 +211,20 @@ class ES:
         print("Some examples:")
         for func in sorted(self.commands.values()):
             print("  es", func.__doc__)
+
+    def passwd(self, argv = []):
+        """passwd <username> <passwordd>"""
+        username = self.__argv(argv, 0)
+        password = self.__argv(argv, 1)
+
+        settings = '''
+        {
+            "password": "%s"
+        }
+        ''' % password
+
+        self.__run("_security/user/%s/_password" % username,
+                   method = "POST", data = settings)
 
     def health(self, argv = []):
         """health [<green|yellow>] [<timeout>]"""
