@@ -65,6 +65,7 @@ class ES:
             "license":                self.license,
             "watermark":              self.watermark,
             "template":               self.template,
+            "create-template":        self.create_template,
             "delete-template":        self.delete_template,
             # Node commands.
             "nodes":                  self.nodes,
@@ -656,6 +657,11 @@ class ES:
         """template <template-name>"""
         template_name = self.__argv(argv, 0)
         self.__run("_template/%s" % template_name, pipe = "jq")
+
+    def create_template(self, argv = []):
+        """create-template <template-name> < file"""
+        template_name = self.__argv(argv, 0)
+        self.__run("_template/%s" % template_name, method = "PUT", data = "@-")
 
     def delete_template(self, argv = []):
         """delete-template <template-name>"""
