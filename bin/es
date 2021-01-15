@@ -198,7 +198,7 @@ class ES:
             func = self.commands[command]
             func(argv)
         except KeyError as err:
-            print("Unknown command: %s" % command, file = sys.stderr)
+            print("Missing %s" % err, file = sys.stderr)
         except sp.CalledProcessError as err:
             print("Is ES running on %s?" % self.__url(), file = sys.stderr)
         except Exception as err:
