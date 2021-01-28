@@ -126,6 +126,7 @@ class ES:
             "put":                    self.put,
             "post":                   self.post,
             "search":                 self.search,
+            "suggest":                self.suggest,
             # Unix-like commands.
             "ls":                     self.ls,
             "cat":                    self.cat,
@@ -1105,21 +1106,14 @@ class ES:
     def read_mode(self, argv = []):
         """read-mode <index>"""
         index = self.__argv(argv, 0)
-        mode  = self.__argv(argv, 1)
-        settings = """
-        {
-            "settings": {
-                "index": {
-                    "translog.durability": "request"
-                }
-
-            }
-        }"""
-        self.__run("%s/_settings?pretty" % index, "PUT", data = settings)
-
+        self.durability([index, "request"])
+        self.refresh_interval([index, "1s"])
 
     def write_mode(self, argv = []):
         """write-mode <index>"""
+        index = self.__argv(argv, 0)
+        self.durability([index, "async"])
+        self.refresh_interval([index, "-1"])
 
     def exists(self, argv = []):
         """exists <index> <field>"""
@@ -1194,14 +1188,17 @@ class ES:
         index = self.__argv(argv, 0, None)
         payload = ""
 
+        id = 0
         for line in sys.stdin:
+            id += 1
+
             data = json.loads(line)
-            _id = data["id"]
+            _id = data["id"] if "id" in data else id
             _type = "_doc"
             _index = index
 
             # Remove id from the data since we have _id.
-            del(data["id"])
+            if "id" in data: del(data["id"])
 
             # Don't need to index the index field if provided.
             if "index" in data:
@@ -1323,6 +1320,25 @@ class ES:
         index = self.__argv(argv, 0)
         size  = self.options["size"]
         self.__run("%s/_search?pretty&size=%s" % (index, size), data = "@-")
+
+    def suggest(self, argv = []):
+        """suggest <index> <term> <field>"""
+        index = self.__argv(argv, 0)
+        term  = self.__argv(argv, 1)
+        field = self.__argv(argv, 2)
+        settings = '''
+        {
+            "suggest": {
+                "autocomplete": {
+                    "prefix": "%s",
+                    "completion": {
+                        "field": "%s"
+                    }
+                }
+            }
+        }
+        ''' % (term, field)
+        self.__run("%s/_search?pretty" % index, data = settings)
 
     def ls(self, argv = []):
         """ls [<index>] [-o <index|docs|size>]]"""
