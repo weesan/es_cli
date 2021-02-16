@@ -1370,8 +1370,12 @@ class ES:
             "store.size",
             "pri.store.size",
         ]
-        self.__run("_cat/indices/%s?v&s=%s&h=%s" % \
-                   (index, sort, ",".join(fields)), pipe = pipe)
+        if index:
+            self.__run("_cat/indices/%s?v&s=%s&h=%s" % \
+                       (index, sort, ",".join(fields)), pipe = pipe)
+        else:
+            self.__run("_cat/indices?v&s=%s&h=%s" % \
+                       (sort, ",".join(fields)), pipe = pipe)
 
     def cat(self, argv = []):
         """cat [<index>]"""
