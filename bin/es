@@ -189,7 +189,8 @@ class ES:
             print(curl)
 
         # Run the curl command and capture the output.
-        res = sp.check_output(curl, shell=True).strip().decode("ascii", "ignore")
+        #res = sp.check_output(curl, shell=True).strip().decode("ascii", "ignore")
+        res = sp.check_output(curl, shell=True).strip()
         if not self.options["silent"] and len(res) > 0:
             print(res)
 
@@ -1214,7 +1215,8 @@ class ES:
                     "_id": _id
                 }
             }
-            index_data = "%s\n%s\n" % (json.dumps(index_info), json.dumps(data))
+            index_data = "%s\n%s\n" % (json.dumps(index_info),
+                                       json.dumps(data, ensure_ascii = False))
 
             # XXX: store_sales could be huge and caused issue.  If so,
             # remove it for now to make progress.
@@ -1332,7 +1334,11 @@ class ES:
                 "autocomplete": {
                     "prefix": "%s",
                     "completion": {
-                        "field": "%s"
+                        "field": "%s",
+                        "skip_duplicates": true,
+                        "contexts": {
+                          "store_country": "US"
+                        }
                     }
                 }
             }
