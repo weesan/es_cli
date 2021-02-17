@@ -1194,7 +1194,7 @@ class ES:
             id += 1
 
             data = json.loads(line)
-            _id = data["id"] if "id" in data else id
+            _id = data["id"] if "id" in data else str(id)
             _type = "_doc"
             _index = index
 
