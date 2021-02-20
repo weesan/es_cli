@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 from __future__ import print_function
 import os
@@ -192,7 +192,7 @@ class ES:
         #res = sp.check_output(curl, shell=True).strip().decode("ascii", "ignore")
         res = sp.check_output(curl, shell=True).strip()
         if not self.options["silent"] and len(res) > 0:
-            print(res)
+            print(res.decode("ascii", "ignore"))
 
         return res
 
@@ -1184,9 +1184,10 @@ class ES:
 
     # Use bulk API to index a json input.
     def index_json(self, argv = []):
-        """index-json <index> < json-file"""
+        """index-json <index> [<id-field>] < json-file"""
 
         index = self.__argv(argv, 0, None)
+        id_field = self.__argv(argv, 1, None)
         payload = ""
 
         id = 0
@@ -1194,7 +1195,10 @@ class ES:
             id += 1
 
             data = json.loads(line)
-            _id = data["id"] if "id" in data else str(id)
+            if id_field:
+                _id = data[id_field]
+            else:
+                _id = data["id"] if "id" in data else str(id)
             _type = "_doc"
             _index = index
 
