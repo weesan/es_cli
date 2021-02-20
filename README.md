@@ -58,12 +58,18 @@ $ es shards | grep "UNASSIGNED"
 
 ### Some unix-like commands which treat the indices as "files"
 
+For example, if you have an index called `stores`, you may use the
+commands as follows:
 ```
 $ es ls
-$ es cat unified-parent
-$ es grep "nike shoes" unified-parent
+$ es cat stores
+$ es grep "nike" stores
+$ es rm stores
 ```
 
-Note that **"es rm unified-parent"** can actually delete the index
-`unified-parent` on the ES cluster.  Please use it with care and your
+The command `ls`, `cat`, `grep`, `rm` are similar to the unix-like
+commands and should be self-explanatory.
+
+Note that **"es rm stores"** can actually delete the index
+`stores` from the ES cluster.  Please use it with care and your
 own risk.
