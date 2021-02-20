@@ -1,5 +1,3 @@
-NOTE: We'd moved this repo to https://github.com/weesan/es_cli
-
 # es
 
 A Python script to manage Elasticsearch clusters via a set of RESTful APIs.
