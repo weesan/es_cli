@@ -103,6 +103,7 @@ class ES:
             "reindex":                self.reindex,
             "count":                  self.count,
             "recovery-stats":         self.recovery_stats,
+            "refresh":                self.refresh,
             "flush":                  self.flush,
             "include":                self.include,
             "exclude":                self.exclude,
@@ -941,6 +942,14 @@ class ES:
         """recovery-stats <index>"""
         index = self.__argv(argv, 0)
         self.__run("_cat/recovery/%s?h=i,s,t,st,snode,shost,tnode,thost,f,fp,b,bp" % index)
+
+    def refresh(self, argv = []):
+        """flush <index>"""
+        index = self.__argv(argv, 0)
+        if index:
+            self.__run("%s/_refresh?pretty" % index)
+        else:
+            self.__run("_refresh?pretty")
 
     def flush(self, argv = []):
         """flush <index>"""
