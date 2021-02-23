@@ -193,7 +193,7 @@ class ES:
         #res = sp.check_output(curl, shell=True).strip().decode("ascii", "ignore")
         res = sp.check_output(curl, shell=True).strip()
         if not self.options["silent"] and len(res) > 0:
-            print(res.decode("ascii", "ignore"))
+            print(res.decode("utf-8", "ignore"))
 
         return res
 
@@ -1340,10 +1340,11 @@ class ES:
         self.__run("%s/_search?pretty&size=%s" % (index, size), data = "@-")
 
     def suggest(self, argv = []):
-        """suggest <index> <term> <field>"""
-        index = self.__argv(argv, 0)
-        term  = self.__argv(argv, 1)
-        field = self.__argv(argv, 2)
+        """suggest <index> <term> <field> <country>"""
+        index   = self.__argv(argv, 0)
+        term    = self.__argv(argv, 1)
+        field   = self.__argv(argv, 2)
+        country = self.__argv(argv, 3, "US")
         settings = '''
         {
             "suggest": {
@@ -1353,13 +1354,13 @@ class ES:
                         "field": "%s",
                         "skip_duplicates": true,
                         "contexts": {
-                          "store_country": "US"
+                          "store_country": "%s"
                         }
                     }
                 }
             }
         }
-        ''' % (term, field)
+        ''' % (term, field, country)
         self.__run("%s/_search?pretty" % index, data = settings)
 
     def ls(self, argv = []):
