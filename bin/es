@@ -1340,7 +1340,7 @@ class ES:
         self.__run("%s/_search?pretty&size=%s" % (index, size), data = "@-")
 
     def suggest(self, argv = []):
-        """suggest <index> <term> <field> <country>"""
+        """suggest <index> <term> <field> [<country>]"""
         index   = self.__argv(argv, 0)
         term    = self.__argv(argv, 1)
         field   = self.__argv(argv, 2)
