@@ -7,6 +7,7 @@ import subprocess as sp
 import sys
 import urllib.parse
 import json
+import time
 
 class ES:
     def __init__(self, options):
@@ -85,6 +86,8 @@ class ES:
             "alias":                  self.alias,
             "unalias":                self.unalias,
             "stats":                  self.stats,
+            "index-rate":             self.index_rate,
+            "search-rate":            self.search_rate,
             "info":                   self.info,
             "mappings":               self.mappings,
             "settings":               self.settings,
@@ -213,7 +216,8 @@ class ES:
     def help(self, argv = []):
         """help"""
         print("Some examples:")
-        for func in sorted(self.commands.values()):
+        #for func in sorted(self.commands.values()):
+        for func in self.commands.values():
             print("  es", func.__doc__)
 
     def passwd(self, argv = []):
@@ -784,6 +788,38 @@ class ES:
         """stats [<index>]"""
         index = self.__argv(argv, 0)
         self.__run("%s/_stats?pretty" % index)
+
+    def index_rate(self, argv = []):
+        """index-rate [<index>] [interval]"""
+        index = self.__argv(argv, 0)
+        interval = int(self.__argv(argv, 1, 5))
+
+        self.__silent(True)
+        now = 0
+        prev = 0
+        while True:
+            stats = json.loads(self.__run("_stats?filter_path=indices.%s.total.indexing.index_total" % index))
+            now = stats["indices"][index]["total"]["indexing"]["index_total"]
+            if prev != 0:
+                print("%.02f" % ((now - prev) / interval))
+            prev = now
+            time.sleep(interval)
+
+    def search_rate(self, argv = []):
+        """search-rate [<index>] [interval]"""
+        index = self.__argv(argv, 0)
+        interval = int(self.__argv(argv, 1, 5))
+
+        self.__silent(True)
+        now = 0
+        prev = 0
+        while True:
+            stats = json.loads(self.__run("_stats?filter_path=indices.%s.total.search.query_total" % index))
+            now = stats["indices"][index]["total"]["search"]["query_total"]
+            if prev != 0:
+                print("%.02f" % ((now - prev) / interval))
+            prev = now
+            time.sleep(interval)
 
     def info(self, argv = []):
         """info [<index>]"""
