@@ -635,7 +635,7 @@ class ES:
         self.__run("%s/_validate/query?explain&pretty" % index, data = "@-")
 
     def analyze(self, argv = []):
-        """analyze <analyzer> <tokenizer> <text>"""
+        """analyze <index> <analyzer> <text>"""
         index    = self.__argv(argv, 0)
         analyzer = self.__argv(argv, 1, "standard")
         text     = self.__argv(argv, 2)
