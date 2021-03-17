@@ -8,6 +8,7 @@ import sys
 import urllib.parse
 import json
 import time
+from datetime import datetime
 
 class ES:
     def __init__(self, options):
@@ -790,35 +791,59 @@ class ES:
         self.__run("%s/_stats?pretty" % index)
 
     def index_rate(self, argv = []):
-        """index-rate [<index>] [interval]"""
+        """index-rate [<index>] [interval] [window_size]"""
         index = self.__argv(argv, 0)
         interval = int(self.__argv(argv, 1, 5))
+        window_size = int(self.__argv(argv, 2, 20))
 
         self.__silent(True)
-        now = 0
-        prev = 0
+
+        window = []
+        now, now_time = 0, 0
+        prev, prev_time = 0, 0
+
         while True:
             stats = json.loads(self.__run("_stats?filter_path=indices.%s.total.indexing.index_total" % index))
             now = stats["indices"][index]["total"]["indexing"]["index_total"]
-            if prev != 0:
-                print("%.02f" % ((now - prev) / interval))
-            prev = now
+            now_time = datetime.now()
+
+            if prev == 0:
+                prev, prev_time = now, now_time
+                continue
+
+            rate = (now - prev) / (now_time - prev_time).total_seconds()
+            window.append(rate)
+            if len(window) > window_size: window = window[-window_size:]
+            print("%.02f" % (sum(window) / len(window)))
+
             time.sleep(interval)
 
     def search_rate(self, argv = []):
-        """search-rate [<index>] [interval]"""
+        """search-rate [<index>] [interval] [window_size]"""
         index = self.__argv(argv, 0)
         interval = int(self.__argv(argv, 1, 5))
+        window_size = int(self.__argv(argv, 2, 20))
 
         self.__silent(True)
-        now = 0
-        prev = 0
+
+        window = []
+        now, now_time = 0, 0
+        prev, prev_time = 0, 0
+
         while True:
             stats = json.loads(self.__run("_stats?filter_path=indices.%s.total.search.query_total" % index))
             now = stats["indices"][index]["total"]["search"]["query_total"]
-            if prev != 0:
-                print("%.02f" % ((now - prev) / interval))
-            prev = now
+            now_time = datetime.now()
+
+            if prev == 0:
+                prev, prev_time = now, now_time
+                continue
+
+            rate = (now - prev) / (now_time - prev_time).total_seconds()
+            window.append(rate)
+            if len(window) > window_size: window = window[-window_size:]
+            print("%.02f" % (sum(window) / len(window)))
+
             time.sleep(interval)
 
     def info(self, argv = []):
