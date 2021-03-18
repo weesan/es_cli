@@ -69,6 +69,7 @@ class ES:
             "template":               self.template,
             "create-template":        self.create_template,
             "delete-template":        self.delete_template,
+            "search-timeout":         self.search_timeout,
             # Node commands.
             "nodes":                  self.nodes,
             "nodes-stats":            self.nodes_stats,
@@ -681,6 +682,18 @@ class ES:
         """delete-template <template-name>"""
         template_name = self.__argv(argv, 0)
         self.__run("_template/%s" % template_name, method = "DELETE")
+
+    def search_timeout(self, argv = []):
+        """search-timeout <timeout>"""
+        timeout = self.__argv(argv, 0)
+        settings = '''
+        {
+            "transient": {
+                "search.default_search_timeout": "%s"
+            }
+        }
+        ''' % timeout
+        self.__run("_cluster/settings?pretty", method = "PUT", data = settings)
 
     def nodes(self, argv = []):
         """nodes [-o [heap|ram|cpu]]"""
