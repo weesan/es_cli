@@ -570,7 +570,10 @@ class ES:
         """snapshot-info    <repo-name> <snapshot-id>"""
         repo = self.__argv(argv, 0)
         snapshot_id = self.__argv(argv, 1, "_all")
-        self.__run("_snapshot/%s/%s?pretty" % (repo, snapshot_id))
+        if repo:
+            self.__run("_snapshot/%s/%s?pretty" % (repo, snapshot_id))
+        else:
+            self.__run("_snapshot/%s?pretty" % snapshot_id)
 
     def snapshot_status(self, argv = []):
         """snapshot-status  <repo-name>"""
