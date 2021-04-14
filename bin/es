@@ -59,6 +59,7 @@ class ES:
             "delete-snapshot":        self.delete_snapshot,
             "snapshot-info":          self.snapshot_info,
             "snapshot-status":        self.snapshot_status,
+            "create-policy":          self.create_policy,
             "init-cluster-recovery":  self.init_cluster_recovery,
             "cluster-recovery":       self.cluster_recovery,
             "index-recovery":         self.index_recovery,
@@ -69,7 +70,11 @@ class ES:
             "template":               self.template,
             "create-template":        self.create_template,
             "delete-template":        self.delete_template,
+            "script":                 self.script,
+            "create-script":          self.create_script,
+            "delete-script":          self.delete_script,
             "search-timeout":         self.search_timeout,
+            "create-user":            self.create_user,
             # Node commands.
             "nodes":                  self.nodes,
             "nodes-stats":            self.nodes_stats,
@@ -567,7 +572,7 @@ class ES:
                    method = "DELETE")
 
     def snapshot_info(self, argv = []):
-        """snapshot-info    <repo-name> <snapshot-id>"""
+        """snapshot-info  <repo-name> <snapshot-id>"""
         repo = self.__argv(argv, 0)
         snapshot_id = self.__argv(argv, 1, "_all")
         if repo:
@@ -580,6 +585,11 @@ class ES:
         repo = self.__argv(argv, 0)
         snapshot_id = self.__argv(argv, 1, "_all")
         self.__run("_snapshot/%s/%s/_status?pretty" % (repo, snapshot_id))
+
+    def create_policy(self, argv = []):
+        """create-policy  <policy-name>"""
+        name = self.__argv(argv, 0)
+        self.__run("_slm/policy/%s" % name, method = "PUT", data = "@-")
 
     def init_cluster_recovery(self, argv = []):
         """init-cluster-recovery <num>"""
@@ -686,6 +696,21 @@ class ES:
         template_name = self.__argv(argv, 0)
         self.__run("_template/%s" % template_name, method = "DELETE")
 
+    def script(self, argv = []):
+        """script <script-name>"""
+        script_name = self.__argv(argv, 0)
+        self.__run("_scripts/%s" % script_name, pipe = "jq")
+
+    def create_script(self, argv = []):
+        """create-script <script-name> < file"""
+        script_name = self.__argv(argv, 0)
+        self.__run("_scripts/%s" % script_name, method = "PUT", data = "@-")
+
+    def delete_script(self, argv = []):
+        """delete-script <script-name>"""
+        script_name = self.__argv(argv, 0)
+        self.__run("_scripts/%s" % script_name, method = "DELETE")
+
     def search_timeout(self, argv = []):
         """search-timeout <timeout>"""
         timeout = self.__argv(argv, 0)
@@ -697,6 +722,20 @@ class ES:
         }
         ''' % timeout
         self.__run("_cluster/settings?pretty", method = "PUT", data = settings)
+
+    def create_user(self, argv = []):
+        """create-user <username> <password>"""
+        username = self.__argv(argv, 0)
+        password = self.__argv(argv, 1)
+        role     = self.__argv(argv, 2, "superuser")
+        settings = '''
+        {
+            "password": "%s",
+            "roles": [ "%s" ]
+        }
+        ''' % (password, role)
+        self.__run("_security/user/%s?pretty" % username,
+                   method = "POST", data = settings)
 
     def nodes(self, argv = []):
         """nodes [-o [heap|ram|cpu]]"""
