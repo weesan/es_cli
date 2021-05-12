@@ -1477,12 +1477,13 @@ class ES:
                         "skip_duplicates": true,
                         "contexts": {
                           "store_country": %s
-                        }
+                        },
+                        "size": %s
                     }
                 }
             }
         }
-        ''' % (term, field, json.dumps(country))
+        ''' % (term, field, json.dumps(country), self.options["size"])
         self.__run("%s/_search?pretty" % index, data = settings)
 
     def ls(self, argv = []):
