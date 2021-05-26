@@ -1266,18 +1266,26 @@ class ES:
         }""" % field
         self.__run("%s/_search?pretty" % index, data = query)
 
-    # XXX
     def index(self, argv = []):
-        """index <index> type field_1 field_2 ... < file"""
+        """index <index> id field_1 field_2 ... < file"""
         index = self.__argv(argv, 0)
-        type = self.__argv(argv, 1, "_doc")
+        id = self.__argv(argv, 1, "")
         fields = self.__argvs(argv, 2)
-        index_info = json.dumps({
+
+        index_info = {
             "index": {
                 "_index": index,
-                "_type": type
+                "_type": "_doc"
             }
-        })
+        }
+
+        if len(id) != 0:
+            index_info["index"].update({
+                "_id": id
+            })
+
+        # Convert index_info from dict to string.
+        index_info = json.dumps(index_info)
         #print(index_info)
 
         payload = ""
