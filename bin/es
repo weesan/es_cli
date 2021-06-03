@@ -1467,8 +1467,10 @@ class ES:
     def search(self, argv = []):
         """search <index>           < file"""
         index = self.__argv(argv, 0)
+        f     = self.options["from"]
         size  = self.options["size"]
-        self.__run("%s/_search?pretty&size=%s" % (index, size), data = "@-")
+        self.__run("%s/_search?pretty&from=%s&size=%s" %
+                   (index, f, size), data = "@-")
 
     def suggest(self, argv = []):
         """suggest <index> <term> <field> [<country1> <country2> ...]"""
