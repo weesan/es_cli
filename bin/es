@@ -820,10 +820,28 @@ class ES:
         self.nodes_stats("", pipe = pipe)
 
     def alias(self, argv = []):
-        """alias <index_name> <alias>"""
+        """alias <index_name> <alias> [<old-index>]"""
         index = self.__argv(argv, 0)
-        new_index = self.__argv(argv, 1)
-        self.__run("%s/_alias/%s?pretty" % (index, new_index), "PUT")
+        alias = self.__argv(argv, 1)
+        old_index = self.__argv(argv, 2, None)
+        if old_index:
+            cmd = """
+            {
+                "actions": [
+                    { "add": { "index": "%s", "alias": "%s" } },
+                    { "remove": { "index": "%s", "alias": "%s" } }
+                ]
+            }
+            """ % (index, alias, old_index, alias)
+        else:
+            cmd = """
+            {
+                "actions": [
+                    { "add": { "index": "%s", "alias": "%s" } }
+                ]
+            }
+            """ % (index, alias)
+        self.__run("_aliases", "POST", data = cmd);
 
     def unalias(self, argv = []):
         """unalias <index_name> <alias>"""
