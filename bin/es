@@ -1279,9 +1279,9 @@ class ES:
                 "exists": {
                     "field": "%s"
                 }
-
-            }
-        }""" % field
+            },
+            "size": %d
+        }""" % (field, self.options["size"])
         self.__run("%s/_search?pretty" % index, data = query)
 
     def index(self, argv = []):
