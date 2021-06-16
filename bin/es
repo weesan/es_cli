@@ -1280,7 +1280,7 @@ class ES:
                     "field": "%s"
                 }
             },
-            "size": %d
+            "size": %s
         }""" % (field, self.options["size"])
         self.__run("%s/_search?pretty" % index, data = query)
 
