@@ -8,6 +8,7 @@ import sys
 import urllib.parse
 import json
 import time
+import tempfile
 from datetime import datetime
 
 class ES:
@@ -181,16 +182,26 @@ class ES:
 
         # Data
         if data:
-            # Escape \ with \\
-            if data.find("\\") != -1:
-                data = data.replace("\\", "\\\\")
+            # When a single doc is too big, curl will fail due to CLI
+            # length limitation.  In which case, we need to resort to
+            # the external file method.
+            if data and len(data) >= self.options["max_bulk_bytes"]:
+                # es -v post stores-v4-old/_doc/200 < walmart-staging.json
+                tmp_file = tempfile.NamedTemporaryFile(delete=False)
+                tmp_file.write(data.encode())
+                tmp_file.close()
+                curl += " --data-binary @'%s'" % tmp_file.name
+            else:
+                # Escape \ with \\
+                if data.find("\\") != -1:
+                    data = data.replace("\\", "\\\\")
 
-            # Escape ' with \'
-            if data.find("'") != -1:
-                data = data.replace("'", "\\'")
+                # Escape ' with \'
+                if data.find("'") != -1:
+                    data = data.replace("'", "\\'")
 
-            # Use $'' for bash string so that \' would work inside it.
-            curl += " -d $'%s'" % data
+                # Use $'' for bash string so that \' would work inside it.
+                curl += " -d $'%s'" % data
 
         # Piping for specific info.
         if pipe:
@@ -1383,17 +1394,10 @@ class ES:
             index_data = "%s\n%s\n" % (json.dumps(index_info),
                                        json.dumps(data, ensure_ascii = False))
 
-            # XXX: store_sales could be huge and caused issue.  If so,
-            # remove it for now to make progress.
-            if len(index_data) >= self.options["max_bulk_bytes"]:
-                if "sale" in data:
-                    del(data["sale"])
-                # Regeneate smaller index_data.
-                index_data = "%s\n%s\n" % (json.dumps(index_info), json.dumps(data))
-
             if len(index_data) + len(payload) >= self.options["max_bulk_bytes"]:
                 try:
-                    self.__run("_bulk?pretty", "POST", data = payload)
+                    if payload:
+                        self.__run("_bulk?pretty", "POST", data = payload)
                 except Exception as err:
                     print(json.dumps(data))
                     print(len(index_data), len(payload))
@@ -1648,7 +1652,7 @@ if __name__ == "__main__":
         "v2":             False,
         "size":           args.size,
         "from":           args.f,
-        "max_bulk_bytes": 100000,
+        "max_bulk_bytes": 600000,
         "option":         args.option,
     }
 
