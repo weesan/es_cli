@@ -76,6 +76,7 @@ class ES:
             "delete-script":          self.delete_script,
             "search-timeout":         self.search_timeout,
             "create-user":            self.create_user,
+            "create-meta":            self.create_meta,
             # Node commands.
             "nodes":                  self.nodes,
             "nodes-stats":            self.nodes_stats,
@@ -748,6 +749,16 @@ class ES:
         ''' % (password, role)
         self.__run("_security/user/%s?pretty" % username,
                    method = "POST", data = settings)
+
+    def create_meta(self, argv = []):
+        """create-meta index json-str"""
+        index = self.__argv(argv, 0)
+        meta = self.__argv(argv, 1)
+        _meta = {
+            "_meta": json.loads(meta)
+        }
+        self.__run("%s/_mapping" % index, method = "PUT",
+                   data = json.dumps(_meta))
 
     def nodes(self, argv = []):
         """nodes [-o [heap|ram|cpu]]"""
