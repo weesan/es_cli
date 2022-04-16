@@ -498,24 +498,22 @@ class ES:
         """get-s3-repo <repo-name>"""
 
     def set_gcs_repo(self, argv = []):
-        """set-gcs-repo <repo-name> <gcs-bucket> <client> <base-path>"""
+        """set-gcs-repo <repo-name> <gcs-bucket> <base-path>"""
         repo = self.__argv(argv, 0)
         bucket = self.__argv(argv, 1)
-        client = self.__argv(argv, 2)
-        base_path = self.__argv(argv, 3)
+        base_path = self.__argv(argv, 2)
         settings = '''
         {
             "type": "gcs",
             "settings": {
               "bucket": "%s",
-              "client": "%s",
               "base_path": "%s",
               "compress": true,
               "max_snapshot_bytes_per_sec": "100mb",
               "max_restore_bytes_per_sec": "1024mb"
             }
         }
-        ''' % (bucket, client, base_path)
+        ''' % (bucket, base_path)
         self.__run("_snapshot/%s?pretty" % repo,
                    method = "POST", data = settings)
 
@@ -532,8 +530,8 @@ class ES:
 
         if not indices:
             # Create snapshots for all indices.
-            run("_snapshot/%s/%s?pretty" % (repo, snapshot_id),
-                method = "POST")
+            self.__run("_snapshot/%s/%s?pretty" % (repo, snapshot_id),
+                       method = "POST")
         else:
             # Restore snapshots for the given indices.
             settings = '''
@@ -542,8 +540,8 @@ class ES:
                 "include_global_state": false
             }
             ''' % ",".join(indices)
-            self.__run("_snapshot/%s/%s/_restore?pretty" % (repo, snapshot_id),
-                       method = "PUT", data = settings)
+            self.__run("_snapshot/%s/%s?pretty" % (repo, snapshot_id),
+                       method = "POST", data = settings)
 
     def restore_snapshot(self, argv = []):
         """restore-snapshot <repo-name> <snapshot-id> <indices>"""
