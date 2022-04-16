@@ -1499,11 +1499,12 @@ class ES:
 
     def search(self, argv = []):
         """search <index>           < file"""
-        index = self.__argv(argv, 0)
-        f     = self.options["from"]
-        size  = self.options["size"]
-        self.__run("%s/_search?pretty&from=%s&size=%s" %
-                   (index, f, size), data = "@-")
+        index   = self.__argv(argv, 0)
+        f       = self.options["from"]
+        size    = self.options["size"]
+        explain = self.options["explain"]
+        self.__run("%s/_search?pretty&from=%s&size=%s&explain=%s" %
+                   (index, f, size, explain), data = "@-")
 
     def suggest(self, argv = []):
         """suggest <index> <term> <field> [<country1> <country2> ...]"""
@@ -1640,6 +1641,8 @@ class ES:
 # The main function.
 if __name__ == "__main__":
     cli = argparse.ArgumentParser(description = "Elasticsearch Utility.")
+    cli.add_argument("-e", "--explain", default = False, action = "store_true",
+                     help = "Explain ES query")
     cli.add_argument("-o", "--option", help = "Option")
     cli.add_argument("-s", "--server", help = "ES server", default="localhost")
     cli.add_argument("-p", "--port", help = "ES port", default = 9200)
@@ -1665,6 +1668,7 @@ if __name__ == "__main__":
         "from":           args.f,
         "max_bulk_bytes": 600000,
         "option":         args.option,
+        "explain":        "true" if args.explain else "false",
     }
 
     ES(options).run(args.command, args.argv)
