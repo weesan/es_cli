@@ -520,7 +520,7 @@ class ES:
                    method = "POST", data = settings)
 
     def get_gcs_repo(self, argv = []):
-        """get-gcp-repo <repo-name>"""
+        """get-gcs-repo <repo-name>"""
         repo = self.__argv(argv, 0)
         self.__run("_snapshot/%s?pretty" % repo)
 
