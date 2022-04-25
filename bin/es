@@ -148,6 +148,8 @@ class ES:
             "grep":                   self.grep,
             # Delete a doc
             "delete":                 self.delete,
+            # LTR plugin
+            "ltr":                    self.ltr,
         }
 
     def __silent(self, on_off):
@@ -1555,7 +1557,7 @@ class ES:
         index = self.__argv(argv, 0)
 
         if index: index += "*"
-        pipe = None if index else "grep -v '^\.'"
+        pipe = None if index or self.options["all"] else "grep -v '^\.'"
 
         sort = self.options["option"] or "index"
         if sort == "docs":
@@ -1636,9 +1638,16 @@ class ES:
         type  = self.__argv(argv, 2, "_doc")
         self.__run("%s/%s/%s" % (index, type, id), "DELETE")
 
+    def ltr(self, argv = []):
+        """ltr <model>"""
+        model = self.__argv(argv, 0)
+        self.__run("_ltr/_model/%s" % model)
+
 # The main function.
 if __name__ == "__main__":
     cli = argparse.ArgumentParser(description = "Elasticsearch Utility.")
+    cli.add_argument("-a", "--all", default = False, action = "store_true",
+                     help = "All including hidden indices")
     cli.add_argument("-e", "--explain", default = False, action = "store_true",
                      help = "Explain ES query")
     cli.add_argument("-o", "--option", help = "Option")
@@ -1667,6 +1676,7 @@ if __name__ == "__main__":
         "max_bulk_bytes": 600000,
         "option":         args.option,
         "explain":        "true" if args.explain else "false",
+        "all":            args.all,
     }
 
     ES(options).run(args.command, args.argv)
