@@ -32,6 +32,7 @@ class ES:
             "aliases":                self.aliases,
             "plugins":                self.plugins,
             "tasks":                  self.tasks,
+            "task":                   self.task,
             "cluster-stats":          self.cluster_stats,
             "cluster-settings":       self.cluster_settings,
             "merge-stats":            self.merge_stats,
@@ -325,6 +326,12 @@ class ES:
     def tasks(self, argv = []):
         """tasks"""
         self.__run("_tasks?pretty")
+
+    def task(self, argv = []):
+        """task <task_id>"""
+        task_id = self.__argv(argv, 0)
+
+        self.__run("_tasks/%s?pretty" % task_id)
 
     def cluster_stats(self, argv = []):
         """cluster-stats"""
