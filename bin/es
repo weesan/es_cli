@@ -93,6 +93,7 @@ class ES:
             "hot-threads":            self.hot_threads,
             "segments-count":         self.segments_count,
             ## Index commands.
+            "create-index":           self.create_index,
             "alias":                  self.alias,
             "unalias":                self.unalias,
             "stats":                  self.stats,
@@ -151,6 +152,8 @@ class ES:
             "delete":                 self.delete,
             # LTR plugin
             "ltr":                    self.ltr,
+            # API keys management
+            "create-api-key":         self.create_api_key,
         }
 
     def __silent(self, on_off):
@@ -847,6 +850,11 @@ class ES:
         """segments-count"""
         pipe = "jq -r '.nodes[]|[.name,.indices.segments.count]|@tsv'|sort"
         self.nodes_stats("", pipe = pipe)
+
+    def create_index(self, argv = []):
+        """create-index <index_name>"""
+        index = self.__argv(argv, 0)
+        self.__run("%s" % index, "PUT")
 
     def alias(self, argv = []):
         """alias <index_name> <alias> [<old-index>]"""
@@ -1649,6 +1657,16 @@ class ES:
         """ltr <model>"""
         model = self.__argv(argv, 0)
         self.__run("_ltr/_model/%s" % model)
+
+    def create_api_key(self, argv = []):
+        """create-api-key <expiration>"""
+        expiration = self.__argv(argv, 0, "1d")
+
+        req = json.dumps({
+            "name": "test-api-key",
+            "expiration": "1d",
+        })
+        self.__run("_security/api_key", "PUT", data = req)
 
 # The main function.
 if __name__ == "__main__":
