@@ -131,6 +131,7 @@ class ES:
             "read-mode":              self.read_mode,
             "write-mode":             self.write_mode,
             "exists":                 self.exists,
+            "not-exists":             self.not_exists,
             # Experiment commands.
             "index":                  self.index,
             "index-json":             self.index_json,
@@ -1316,6 +1317,25 @@ class ES:
                 "exists": {
                     "field": "%s"
                 }
+            },
+            "size": %s
+        }""" % (field, self.options["size"])
+        self.__run("%s/_search?pretty" % index, data = query)
+
+    def not_exists(self, argv = []):
+        """not-exists <index> <field>"""
+        index = self.__argv(argv, 0)
+        field = self.__argv(argv, 1)
+        query = """
+        {
+            "query": {
+              "bool": {
+                "must_not": {
+                  "exists": {
+                      "field": "%s"
+                  }
+                }
+              }
             },
             "size": %s
         }""" % (field, self.options["size"])
