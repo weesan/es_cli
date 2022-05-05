@@ -1696,7 +1696,7 @@ class ES:
         })
         self.__run("_security/api_key", "POST", data = req)
 
-    // XXX: Not working.
+    # XXX: Not working.
     def delete_api_key(self, argv = []):
         """delete-api-key <user> <key-id>"""
         user = self.__argv(argv, 0)
