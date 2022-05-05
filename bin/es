@@ -156,6 +156,7 @@ class ES:
             # API keys management
             "api-keys":               self.api_keys,
             "create-api-key":         self.create_api_key,
+            "delete-api-key":         self.delete_api_key,
         }
 
     def __silent(self, on_off):
@@ -1682,7 +1683,7 @@ class ES:
     def api_keys(self, argv = []):
         """api-keys <name>"""
         name = self.__argv(argv, 0)
-        self.__run("_security/api_key?name=%s" % name)
+        self.__run("_security/api_key?name=%s&pretty" % name)
 
     def create_api_key(self, argv = []):
         """create-api-key <name> <expiration>"""
@@ -1694,6 +1695,14 @@ class ES:
             "expiration": expiration,
         })
         self.__run("_security/api_key", "POST", data = req)
+
+    // XXX: Not working.
+    def delete_api_key(self, argv = []):
+        """delete-api-key <user> <key-id>"""
+        user = self.__argv(argv, 0)
+        key_id = self.__argv(argv, 1, "1d")
+
+        self.__run("api/v1/users/%s/auth/keys/%s" % (user, key_id), "DELETE")
 
 # The main function.
 if __name__ == "__main__":
