@@ -154,6 +154,7 @@ class ES:
             # LTR plugin
             "ltr":                    self.ltr,
             # API keys management
+            "api-keys":               self.api_keys,
             "create-api-key":         self.create_api_key,
         }
 
@@ -1678,15 +1679,21 @@ class ES:
         model = self.__argv(argv, 0)
         self.__run("_ltr/_model/%s" % model)
 
+    def api_keys(self, argv = []):
+        """api-keys <name>"""
+        name = self.__argv(argv, 0)
+        self.__run("_security/api_key?name=%s" % name)
+
     def create_api_key(self, argv = []):
-        """create-api-key <expiration>"""
-        expiration = self.__argv(argv, 0, "1d")
+        """create-api-key <name> <expiration>"""
+        name = self.__argv(argv, 0)
+        expiration = self.__argv(argv, 1, "1d")
 
         req = json.dumps({
-            "name": "test-api-key",
-            "expiration": "1d",
+            "name": name,
+            "expiration": expiration,
         })
-        self.__run("_security/api_key", "PUT", data = req)
+        self.__run("_security/api_key", "POST", data = req)
 
 # The main function.
 if __name__ == "__main__":
