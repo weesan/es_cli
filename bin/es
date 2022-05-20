@@ -1125,7 +1125,7 @@ class ES:
         self.__run("_cat/recovery/%s?h=i,s,t,st,snode,shost,tnode,thost,f,fp,b,bp" % index)
 
     def refresh(self, argv = []):
-        """flush <index>"""
+        """refresh <index>"""
         index = self.__argv(argv, 0)
         if index:
             self.__run("%s/_refresh?pretty" % index)
