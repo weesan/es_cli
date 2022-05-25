@@ -1706,21 +1706,21 @@ class ES:
 
 # The main function.
 if __name__ == "__main__":
-    cli = argparse.ArgumentParser(description = "Elasticsearch Utility.")
-    cli.add_argument("-a", "--all", default = False, action = "store_true",
-                     help = "All including hidden indices")
-    cli.add_argument("-e", "--explain", default = False, action = "store_true",
-                     help = "Explain ES query")
-    cli.add_argument("-o", "--option", help = "Option")
-    cli.add_argument("-s", "--server", help = "ES server", default="localhost")
-    cli.add_argument("-p", "--port", help = "ES port", default = 9200)
-    cli.add_argument("-u", "--username", help = "Username")
-    cli.add_argument("-P", "--password", help = "Password")
-    cli.add_argument("-v", "--verbose", help = "Verbosity", action = "count")
-    cli.add_argument("-z", "--size", help = "Size", default = 30)
-    cli.add_argument("-f", help = "From", default = 0)
-    cli.add_argument("command", type = str, help = "Commands")
-    cli.add_argument("argv", type = str, nargs = "*", help = "Arguments")
+    cli = argparse.ArgumentParser(description="Elasticsearch Utility.")
+    cli.add_argument("-a", "--all", default=False, action="store_true",
+                     help="All including hidden indices")
+    cli.add_argument("-e", "--explain", default=False, action="store_true",
+                     help="Explain ES query")
+    cli.add_argument("-o", "--option", help="Option")
+    cli.add_argument("-s", "--server", help="ES server", default="localhost")
+    cli.add_argument("-p", "--port", help="ES port", default=9200)
+    cli.add_argument("-u", "--username", help="Username")
+    cli.add_argument("-P", "--password", help="Password")
+    cli.add_argument("-v", "--verbose", help="Verbosity", action="count")
+    cli.add_argument("-z", "--size", help="Size", default=30)
+    cli.add_argument("-f", help="From", default=0)
+    cli.add_argument("command", type=str, help="Commands")
+    cli.add_argument("argv", type=str, nargs="*", help="Arguments")
     args = cli.parse_args()
 
     options = {
