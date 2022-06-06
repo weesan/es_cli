@@ -152,7 +152,14 @@ class ES:
             # Delete a doc
             "delete":                 self.delete,
             # LTR plugin
-            "ltr":                    self.ltr,
+            # https://elasticsearch-learning-to-rank.readthedocs.io/en/latest/building-features.html
+            "ltr-featureset":         self.ltr_featureset,
+            "create-ltr-featureset":  self.create_ltr_featureset,
+            "delete-ltr-featureset":  self.delete_ltr_featureset,
+            # https://elasticsearch-learning-to-rank.readthedocs.io/en/latest/training-models.html
+            "ltr-model":              self.ltr_model,
+            "create-ltr-model":       self.create_ltr_model,
+            "delete-ltr-model":       self.delete_ltr_model,
             # API keys management
             "api-keys":               self.api_keys,
             "create-api-key":         self.create_api_key,
@@ -1675,10 +1682,47 @@ class ES:
         type  = self.__argv(argv, 2, "_doc")
         self.__run("%s/%s/%s" % (index, type, id), "DELETE")
 
-    def ltr(self, argv = []):
-        """ltr <model>"""
-        model = self.__argv(argv, 0)
-        self.__run("_ltr/_model/%s" % model)
+    def ltr_featureset(self, argv = []):
+        """ltr-featureset <feature>"""
+        feature = self.__argv(argv, 0)
+        self.__run("_ltr/_featureset/%s?pretty" % feature)
+
+    def create_ltr_featureset(self, argv = []):
+        """create-ltr-featureset <name>"""
+        name = self.__argv(argv, 0)
+        self.__run("_ltr/_featureset/%s?pretty" % name, "POST", data = "@-")
+
+    def delete_ltr_featureset(self, argv = []):
+        """delete-ltr-featureset <name>"""
+        name = self.__argv(argv, 0)
+        self.__run("_ltr/_featureset/%s?pretty" % name, "DELETE")
+
+    def ltr_model(self, argv = []):
+        """ltr-model <name>"""
+        name = self.__argv(argv, 0)
+        self.__run("_ltr/_model/%s?pretty" % name)
+
+    def create_ltr_model(self, argv = []):
+        """create-ltr-model <name> <feature-set> <ltr-definition>"""
+        name = self.__argv(argv, 0)
+        feature_set = self.__argv(argv, 1)
+        ltr_definition = self.__argv(argv, 2)
+        data = {
+            "model": {
+                "name": name,
+                "model": {
+                    "type": "model/xgboost+json",
+                    "definition": json.load(sys.stdin),
+                }
+            }
+        }
+        self.__run("_ltr/_featureset/%s/_createmodel?pretty" % feature_set,
+                   "POST", data = json.dumps(data))
+
+    def delete_ltr_model(self, argv = []):
+        """delete-ltr-model <name>"""
+        name = self.__argv(argv, 0)
+        self.__run("_ltr/_model/%s?pretty" % name, "DELETE")
 
     def api_keys(self, argv = []):
         """api-keys <name>"""
