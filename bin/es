@@ -1703,10 +1703,9 @@ class ES:
         self.__run("_ltr/_model/%s?pretty" % name)
 
     def create_ltr_model(self, argv = []):
-        """create-ltr-model <name> <feature-set> <ltr-definition>"""
+        """create-ltr-model <name> <feature-set>"""
         name = self.__argv(argv, 0)
         feature_set = self.__argv(argv, 1)
-        ltr_definition = self.__argv(argv, 2)
         data = {
             "model": {
                 "name": name,
