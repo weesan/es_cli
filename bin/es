@@ -1551,11 +1551,12 @@ class ES:
                    (index, f, size, explain), data = "@-")
 
     def suggest(self, argv = []):
-        """suggest <index> <term> <field> [<country1> <country2> ...]"""
-        index   = self.__argv(argv, 0)
-        term    = self.__argv(argv, 1)
-        field   = self.__argv(argv, 2)
-        country = self.__argvs(argv, 3, ["US"])
+        """suggest <index> <term> <field> <fuzziness> [<country1> <country2> ...]"""
+        index     = self.__argv(argv, 0)
+        term      = self.__argv(argv, 1)
+        field     = self.__argv(argv, 2)
+        fuzziness = self.__argv(argv, 3, 0)
+        country   = self.__argvs(argv, 4, ["US"])
         query = '''
         {
             "suggest": {
@@ -1563,7 +1564,10 @@ class ES:
                     "prefix": "%s",
                     "completion": {
                         "field": "%s",
-                        "skip_duplicates": true,
+                        "skip_duplicates": false,
+                        "fuzzy": {
+                          "fuzziness": "%s"
+                        },
                         "contexts": {
                           "store_country": %s
                         },
@@ -1572,7 +1576,7 @@ class ES:
                 }
             }
         }
-        ''' % (term, field, json.dumps(country), self.options["size"])
+        ''' % (term, field, fuzziness, json.dumps(country), self.options["size"])
         self.__run("%s/_search?pretty" % index, data = query)
 
     def prefix_search(self, argv = []):
