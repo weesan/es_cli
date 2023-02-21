@@ -1439,6 +1439,11 @@ class ES:
                     _index =  data["index"]
                 del(data["index"])
 
+            # Remove fields with empty list.
+            for k in list(data.keys()):
+                if data[k] == []:
+                    del(data[k])
+
             index_info = {
                 "index": {
                     "_index": _index,
