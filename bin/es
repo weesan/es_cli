@@ -144,6 +144,7 @@ class ES:
             "search":                 self.search,
             "suggest":                self.suggest,
             "prefix-search":          self.prefix_search,
+            "rank-feature":           self.rank_feature,
             # Unix-like commands.
             "ls":                     self.ls,
             "cat":                    self.cat,
@@ -1603,6 +1604,29 @@ class ES:
             "size": %s
         }
         ''' % (field, term, self.options["from"], self.options["size"])
+        self.__run("%s/_search?pretty" % index, data = query)
+
+    # XXX
+    def rank_feature(self, argv = []):
+        """rank-feature <index> <field> <feature>"""
+        index   = self.__argv(argv, 0)
+        field   = self.__argv(argv, 1)
+        feature = self.__argv(argv, 2)
+        query = '''
+        {
+            "query": {
+                "bool": {
+                    "should": {
+                        "rank_feature": {
+                            "field": "%s.%s"
+                        }
+                    }
+                }
+            },
+            "from": %s,
+            "size": %s
+        }
+        '''% (field, feature, self.options["from"], self.options["size"])
         self.__run("%s/_search?pretty" % index, data = query)
 
     def ls(self, argv = []):
