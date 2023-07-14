@@ -132,6 +132,7 @@ class ES:
             "write-mode":             self.write_mode,
             "exists":                 self.exists,
             "not-exists":             self.not_exists,
+            "aggs":                   self.aggs,
             # Experiment commands.
             "index":                  self.index,
             "index-json":             self.index_json,
@@ -1348,6 +1349,24 @@ class ES:
               }
             },
             "size": %s
+        }""" % (field, self.options["size"])
+        self.__run("%s/_search?pretty" % index, data = query)
+
+    # Only works with keyword fields.
+    def aggs(self, argv = []):
+        """aggs <index> <field>"""
+        index = self.__argv(argv, 0)
+        field = self.__argv(argv, 1)
+        query = """{
+          "aggs": {
+            "results": {
+              "terms": {
+                "field": "%s",
+                "size": %s
+              }
+            }
+          },
+          "_source": false
         }""" % (field, self.options["size"])
         self.__run("%s/_search?pretty" % index, data = query)
 
