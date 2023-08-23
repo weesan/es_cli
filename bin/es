@@ -1498,7 +1498,8 @@ class ES:
 
     # Using bulk api to index.
     def index_dump(self, argv = []):
-        """index-dump < dump-file"""
+        """index-dump [<index>] < dump-file"""
+        index = self.__argv(argv, 0, None)
 
         payload = ""
 
@@ -1507,7 +1508,7 @@ class ES:
 
             id = data["_id"]
             #type = data["_type"]
-            index = data["_index"]
+            index = data["_index"] if index == None else index
             source = data["_source"]
 
             # XXX: store_sales could be huge and caused issue.  Remove
