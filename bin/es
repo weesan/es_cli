@@ -102,6 +102,8 @@ class ES:
             "info":                   self.info,
             "mappings":               self.mappings,
             "settings":               self.settings,
+            "cache-info":             self.cache_info,
+            "enable-cache":           self.enable_cache,
             "clear-cache":            self.clear_cache,
             "open":                   self.open,
             "close":                  self.close,
@@ -174,14 +176,15 @@ class ES:
 
     def __url(self, argv = []):
         host, port = self.options["host"], self.options["port"]
+        host_port = "%s:%s" % (host, port) if port != "" else host
 
         # Username and password when needed.
         username, pw = self.options["username"], self.options["password"]
 
         if username and pw:
-            return "http://%s:%s@%s:%s" % (username, pw, host, port)
+            return "%s:%s@%s" % (username, pw, host_port)
         else:
-            return "http://%s:%s" % (host, port)
+            return "%s" % host_port
 
     def __argv(self, argv, i, default = ""):
         return argv[i] if len(argv) >= (i + 1) else default
@@ -190,7 +193,7 @@ class ES:
         return argv[i:] if len(argv) >= (i + 1) else default
 
     def __run(self, cmd, method = "GET", pipe = None, data = None):
-        curl = "curl -s -X%s" % method
+        curl = "curl -sk -X%s" % method
 
         # ESv6 or greater requires content-type header.
         if not self.options["v2"] and method in [ "POST", "PUT", "GET" ]:
@@ -974,6 +977,17 @@ class ES:
         """settings [<index>]"""
         index = self.__argv(argv, 0)
         self.__run("%s/_settings?pretty" % index)
+
+    def cache_info(self, argv = []):
+        """cache-info"""
+        self.__run("_stats/request_cache?human")
+
+    def enable_cache(self, argv = []):
+        """enable-cache [<index>]"""
+        index = self.__argv(argv, 0)
+        settings = { "index.requests.cache.enable": True }
+        self.__run("%s/_settings?pretty" % index,
+                   method="PUT", data=json.dumps(settings))
 
     def clear_cache(self, argv = []):
         """clear-cache [<index>]"""
