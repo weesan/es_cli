@@ -246,9 +246,9 @@ class ES:
             func = self.commands[command]
             func(argv)
         except KeyError as err:
-            print("Missing %s" % err, file = sys.stderr)
+            print("Missing %s" % err, file=sys.stderr)
         except sp.CalledProcessError as err:
-            print("Is ES running on %s?" % self.__url(), file = sys.stderr)
+            print("Is ES running on %s?" % self.__url(), file=sys.stderr)
         except Exception as err:
             raise(err)
 
@@ -980,7 +980,8 @@ class ES:
 
     def cache_info(self, argv = []):
         """cache-info"""
-        self.__run("_stats/request_cache?human")
+        human = "true" if self.options["human"] else "false"
+        self.__run("_stats/request_cache?human=%s" % human)
 
     def enable_cache(self, argv = []):
         """enable-cache [<index>]"""
@@ -1560,17 +1561,17 @@ class ES:
         if id:
             self.__run("%s/_doc/%s?pretty" % (index, id))
         else:
-            self.__run("%s/?pretty" % index, "GET", data = "@-")
+            self.__run("%s/?pretty" % index, "GET", data="@-")
 
     def put(self, argv = []):
         """put <index>              < file"""
         index = self.__argv(argv, 0)
-        self.__run("%s/?pretty" % index, "PUT", data = "@-")
+        self.__run("%s/?pretty" % index, "PUT", data="@-")
 
     def post(self, argv = []):
         """post <index>             < file"""
         index = self.__argv(argv, 0)
-        self.__run("%s/?pretty" % index, "POST", data = "@-")
+        self.__run("%s/?pretty" % index, "POST", data="@-")
 
     def search(self, argv = []):
         """search <index>           < file"""
@@ -1578,8 +1579,9 @@ class ES:
         f       = self.options["from"]
         size    = self.options["size"]
         explain = self.options["explain"]
-        self.__run("%s/_search?pretty&from=%s&size=%s&explain=%s" %
-                   (index, f, size, explain), data = "@-")
+        human   = "true" if self.options["human"] else "false"
+        self.__run("%s/_search?pretty&from=%s&size=%s&human=%s&explain=%s" %
+                   (index, f, size, human, explain), data="@-")
 
     def suggest(self, argv = []):
         """suggest <index> <term> <field> <fuzziness> [<country1> <country2> ...]"""
@@ -1701,7 +1703,7 @@ class ES:
         path = index
         if type:    path += "/%s" % type
         if id:      path += "/%s" % id
-        path += "?pretty"
+        #path += "?pretty"
         if routing: path += "&routing=%s" % routing
         self.__run(path, "DELETE")
 
@@ -1820,6 +1822,8 @@ if __name__ == "__main__":
     cli.add_argument("-v", "--verbose", help="Verbosity", action="count")
     cli.add_argument("-z", "--size", help="Size", default=30)
     cli.add_argument("-f", help="From", default=0)
+    cli.add_argument("--human", default=False, action="store_true",
+                     help="Display human readable output")
     cli.add_argument("command", type=str, help="Commands")
     cli.add_argument("argv", type=str, nargs="*", help="Arguments")
     args = cli.parse_args()
@@ -1837,6 +1841,7 @@ if __name__ == "__main__":
         "from":           args.f,
         "max_bulk_bytes": 600000,
         "option":         args.option,
+        "human":          args.human,
         "explain":        "true" if args.explain else "false",
         "all":            args.all,
     }
