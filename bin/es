@@ -103,6 +103,8 @@ class ES:
             "mappings":               self.mappings,
             "settings":               self.settings,
             "cache-info":             self.cache_info,
+            "query-cache":            self.query_cache,
+            "request-cache":          self.request_cache,
             "enable-cache":           self.enable_cache,
             "clear-cache":            self.clear_cache,
             "open":                   self.open,
@@ -980,6 +982,15 @@ class ES:
 
     def cache_info(self, argv = []):
         """cache-info"""
+        self.__run("_cat/nodes?v&h=id,queryCacheMemory,queryCacheEvictions,requestCacheMemory,requestCacheHitCount,requestCacheMissCount,flushTotal,flushTotalTime")
+
+    def query_cache(self, argv = []):
+        """query-cache"""
+        human = "true" if self.options["human"] else "false"
+        self.__run("_stats/query_cache?human=%s" % human)
+
+    def request_cache(self, argv = []):
+        """request-cache"""
         human = "true" if self.options["human"] else "false"
         self.__run("_stats/request_cache?human=%s" % human)
 
@@ -993,7 +1004,7 @@ class ES:
     def clear_cache(self, argv = []):
         """clear-cache [<index>]"""
         index = self.__argv(argv, 0)
-        self.__run("%s/_cache/clear?pretty" % index)
+        self.__run("%s/_cache/clear?pretty" % index, "POST")
 
     def open(self, argv = []):
         """open <index>"""
@@ -1059,7 +1070,7 @@ class ES:
 
             }
         }""" % mode
-        self.__run("%s/_settings?pretty" % index, "PUT", data = settings)
+        self.__run("%s/_settings" % index, "PUT", data = settings)
 
     def sync_interval(self, argv = []):
         """sync-interval <index> num"""
@@ -1578,10 +1589,11 @@ class ES:
         index   = self.__argv(argv, 0)
         f       = self.options["from"]
         size    = self.options["size"]
-        explain = self.options["explain"]
         human   = "true" if self.options["human"] else "false"
-        self.__run("%s/_search?pretty&from=%s&size=%s&human=%s&explain=%s" %
-                   (index, f, size, human, explain), data="@-")
+        rc      = "true" if self.options["request-cache"] else "false"
+        explain = self.options["explain"]
+
+        self.__run("%s/_search?pretty&from=%s&size=%s&human=%s&request_cache=%s&explain=%s" % (index, f, size, human, rc, explain), data="@-")
 
     def suggest(self, argv = []):
         """suggest <index> <term> <field> <fuzziness> [<country1> <country2> ...]"""
@@ -1824,6 +1836,8 @@ if __name__ == "__main__":
     cli.add_argument("-f", help="From", default=0)
     cli.add_argument("--human", default=False, action="store_true",
                      help="Display human readable output")
+    cli.add_argument("-rc", "--request-cache", default=False, action="store_true",
+                     help="Enable request Cache")
     cli.add_argument("command", type=str, help="Commands")
     cli.add_argument("argv", type=str, nargs="*", help="Arguments")
     args = cli.parse_args()
@@ -1844,6 +1858,7 @@ if __name__ == "__main__":
         "human":          args.human,
         "explain":        "true" if args.explain else "false",
         "all":            args.all,
+        "request-cache":  args.request_cache,
     }
 
     ES(options).run(args.command, args.argv)
