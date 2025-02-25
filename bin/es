@@ -147,6 +147,7 @@ class ES:
             "put":                    self.put,
             "post":                   self.post,
             "search":                 self.search,
+            "update":                 self.update,
             "suggest":                self.suggest,
             "prefix-search":          self.prefix_search,
             "rank-feature":           self.rank_feature,
@@ -1594,6 +1595,25 @@ class ES:
         explain = self.options["explain"]
 
         self.__run("%s/_search?pretty&from=%s&size=%s&human=%s&request_cache=%s&explain=%s" % (index, f, size, human, rc, explain), data="@-")
+
+    def update(self, argv = []):
+        """update <index> <doc_id> <field> <value>"""
+        index   = self.__argv(argv, 0)
+        doc_id  = self.__argv(argv, 1)
+        field   = self.__argv(argv, 2)
+        value   = self.__argv(argv, 3)
+
+        # Handle the empty array vs string.
+        if value != "[]":
+            value = '"%s"' % value
+
+        data = """{
+            "doc": {
+                "%s": %s
+            }
+        }""" % (field, value)
+
+        self.__run("%s/_update/%s" % (index, doc_id), method="POST", data=data)
 
     def suggest(self, argv = []):
         """suggest <index> <term> <field> <fuzziness> [<country1> <country2> ...]"""
