@@ -59,9 +59,14 @@ class ES:
             "create-snapshot":        self.create_snapshot,
             "restore-snapshot":       self.restore_snapshot,
             "delete-snapshot":        self.delete_snapshot,
+            "snapshot-overview":      self.snapshot_overview,
             "snapshot-info":          self.snapshot_info,
             "snapshot-status":        self.snapshot_status,
-            "create-policy":          self.create_policy,
+            "snapshot-progress":      self.snapshot_progress,
+            "slm":                    self.slm,
+            "create-slm":             self.create_slm,
+            "delete-slm":             self.delete_slm,
+            "execute-slm":            self.execute_slm,
             "init-cluster-recovery":  self.init_cluster_recovery,
             "cluster-recovery":       self.cluster_recovery,
             "index-recovery":         self.index_recovery,
@@ -234,7 +239,7 @@ class ES:
 
         # Output the curl command if -v is specified.
         if self.options["verbose"]:
-            print(curl)
+            print(curl, file=sys.stderr)
 
         # Run the curl command and capture the output.
         #res = sp.check_output(curl, shell=True).strip().decode("ascii", "ignore")
@@ -602,7 +607,7 @@ class ES:
                        method = "POST", data = settings)
 
     def delete_snapshot(self, argv = []):
-        """delete-snapshot  <repo-name> <snapshot-id>"""
+        """delete-snapshot <repo-name> <snapshot-id>"""
         repo = self.__argv(argv, 0)
         snapshot_id = self.__argv(argv, 1)
         if len(snapshot_id) == 0:
@@ -612,8 +617,14 @@ class ES:
         self.__run("_snapshot/%s/%s?pretty" % (repo, snapshot_id),
                    method = "DELETE")
 
+    def snapshot_overview(self, argv = []):
+        """snapshot-overview <repo-name>"""
+        repo = self.__argv(argv, 0)
+        snapshot_id = self.__argv(argv, 1, "_all")
+        self.__run("_snapshot/%s/%s?pretty" % (repo, snapshot_id), pipe="jq -r '.snapshots[]|[.snapshot,.state]|@tsv'")
+
     def snapshot_info(self, argv = []):
-        """snapshot-info  <repo-name> <snapshot-id>"""
+        """snapshot-info <repo-name> <snapshot-id>"""
         repo = self.__argv(argv, 0)
         snapshot_id = self.__argv(argv, 1, "_all")
         if repo:
@@ -622,15 +633,36 @@ class ES:
             self.__run("_snapshot/%s?pretty" % snapshot_id)
 
     def snapshot_status(self, argv = []):
-        """snapshot-status  <repo-name>"""
+        """snapshot-status <repo-name>"""
         repo = self.__argv(argv, 0)
         snapshot_id = self.__argv(argv, 1, "_all")
         self.__run("_snapshot/%s/%s/_status?pretty" % (repo, snapshot_id))
 
-    def create_policy(self, argv = []):
-        """create-policy  <policy-name>"""
+    def snapshot_progress(self, argv = []):
+        """snapshot-progress <repo-name>"""
+        repo = self.__argv(argv, 0)
+        snapshot_id = self.__argv(argv, 1, "_all")
+        self.__run("_snapshot/%s/%s/_status?pretty" % (repo, snapshot_id), pipe="jq '.snapshots[].stats|.processed.size_in_bytes/.total.size_in_bytes'")
+
+    def slm(self, argv = []):
+        """slm <policy-name>"""
+        name = self.__argv(argv, 0)
+        self.__run("_slm/policy/%s" % name, pipe = "jq")
+
+    def create_slm(self, argv = []):
+        """create-slm <policy-name>"""
         name = self.__argv(argv, 0)
         self.__run("_slm/policy/%s" % name, method = "PUT", data = "@-")
+
+    def delete_slm(self, argv = []):
+        """delete-slm <policy-name>"""
+        name = self.__argv(argv, 0)
+        self.__run("_slm/policy/%s" % name, method = "DELETE")
+
+    def execute_slm(self, argv = []):
+        """execute-slm <policy-name>"""
+        name = self.__argv(argv, 0)
+        self.__run("_slm/policy/%s/_execute" % name, method = "POST")
 
     def init_cluster_recovery(self, argv = []):
         """init-cluster-recovery <num>"""
