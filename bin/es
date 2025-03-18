@@ -46,6 +46,7 @@ class ES:
             "enable-allocation":      self.enable_allocation,
             "disable-allocation":     self.disable_allocation,
             "exclude-allocation":     self.exclude_allocation,
+            "explain-allocation":     self.explain_allocation,
             "enable-rebalance":       self.enable_rebalance,
             "set-disk-allocation":    self.set_disk_allocation,
             "throttle":               self.throttle,
@@ -56,6 +57,7 @@ class ES:
             "get-s3-repo":            self.get_s3_repo,
             "set-gcs-repo":           self.set_gcs_repo,
             "get-gcs-repo":           self.get_gcs_repo,
+            "del-gcs-repo":           self.del_gcs_repo,
             "create-snapshot":        self.create_snapshot,
             "restore-snapshot":       self.restore_snapshot,
             "delete-snapshot":        self.delete_snapshot,
@@ -487,6 +489,11 @@ class ES:
         ''' % ",".join(nodes)
         self.__run("_cluster/settings?pretty", method = "PUT", data = settings)
 
+    def explain_allocation(self, argv = []):
+        """explain-allocation"""
+
+        self.__run("_cluster/allocation/explain?pretty")
+
     def enable_rebalance(self, argv = []):
         """enable-rebalance <index> (to be implemented)"""
 
@@ -556,6 +563,11 @@ class ES:
         """get-gcs-repo <repo-name>"""
         repo = self.__argv(argv, 0)
         self.__run("_snapshot/%s?pretty" % repo)
+
+    def del_gcs_repo(self, argv = []):
+        """del-gcs-repo <repo-name>"""
+        repo = self.__argv(argv, 0)
+        self.__run("_snapshot/%s?pretty" % repo, method="DELETE")
 
     def create_snapshot(self, argv = []):
         """create-snapshot  <repo-name> <snapshot-id> <indices>"""
