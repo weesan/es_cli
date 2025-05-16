@@ -145,6 +145,8 @@ class ES:
             "not-exists":             self.not_exists,
             "aggs":                   self.aggs,
             # Experiment commands.
+            "must-match":             self.must_match,
+            "should-match":           self.should_match,
             "index":                  self.index,
             "index-json":             self.index_json,
             "index-dump":             self.index_dump,
@@ -1433,6 +1435,58 @@ class ES:
         }""" % (field, self.options["size"])
         self.__run("%s/_search?pretty" % index, data = query)
 
+    def must_match(self, argv = []):
+        """must-match <index> <kv1> [<kv2>]"""
+
+        index = self.__argv(argv, 0)
+
+        match = []
+        for i in range(1, len(argv)):
+            kv = argv[i].split(":")
+            if len(kv) != 2:
+                raise Exception("Invalid key-value pair: %s" % argv[i])
+            k, v = kv[0], kv[1]
+            match.append({
+                "match": {
+                    k: v
+                }
+            })
+        
+        query = json.dumps({
+            "query": {
+                "bool": {
+                    "must": match
+                }
+            }
+        })
+        self.__run("%s/_search?pretty" % index, "POST", data=query)
+
+    def should_match(self, argv = []):
+        """should-match <index> <kv1> [<kv2>]"""
+
+        index = self.__argv(argv, 0)
+
+        match = []
+        for i in range(1, len(argv)):
+            kv = argv[i].split(":")
+            if len(kv) != 2:
+                raise Exception("Invalid key-value pair: %s" % argv[i])
+            k, v = kv[0], kv[1]
+            match.append({
+                "match": {
+                    k: v
+                }
+            })
+        
+        query = json.dumps({
+            "query": {
+                "bool": {
+                    "should": match
+                }
+            }
+        })
+        self.__run("%s/_search?pretty" % index, "POST", data=query)
+
     def index(self, argv = []):
         """index <index> id field_1 field_2 ... < file"""
         index = self.__argv(argv, 0)
@@ -1805,7 +1859,7 @@ class ES:
                     }
                 }
             })
-            self.__run("%s/_search?pretty" % index, "POST", data = query)
+            self.__run("%s/_search?pretty" % index, "POST", data=query)
         else:
             term  = urllib.parse.quote_plus(term)
             index = self.__argv(argv, 1)
