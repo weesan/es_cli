@@ -924,14 +924,15 @@ class ES:
         alias = self.__argv(argv, 1)
         old_index = self.__argv(argv, 2, None)
 
-        aliases = alias.split(",")
-        cmd = {}
-        cmd["actions"] = [{"add": {"index": index, "alias": a}} for a in aliases]
+        if index == "-":
+            self.__run("_aliases", "POST", data="@-")
+        else:
+            aliases = alias.split(",")
+            cmd = {}
+            cmd["actions"] = [{"add": {"index": index, "alias": a}} for a in aliases]
 
-        if old_index:
-            cmd["actions"] += [{"remove": { "index": old_index, "alias": a }} for a in aliases]
-
-        self.__run("_aliases", "POST", data=json.dumps(cmd));
+            if old_index:
+                cmd["actions"] += [{"remove": { "index": old_index, "alias": a }} for a in aliases]
 
     def unalias(self, argv = []):
         """unalias <index_name> <alias>"""
