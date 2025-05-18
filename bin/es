@@ -147,6 +147,7 @@ class ES:
             # Experiment commands.
             "must-match":             self.must_match,
             "should-match":           self.should_match,
+            "filter":                 self.filter,
             "index":                  self.index,
             "index-json":             self.index_json,
             "index-dump":             self.index_dump,
@@ -1482,6 +1483,32 @@ class ES:
             "query": {
                 "bool": {
                     "should": match
+                }
+            }
+        })
+        self.__run("%s/_search?pretty" % index, "POST", data=query)
+
+    def filter(self, argv = []):
+        """filter <index> <kv1> [<kv2>]"""
+
+        index = self.__argv(argv, 0)
+
+        match = []
+        for i in range(1, len(argv)):
+            kv = argv[i].split(":")
+            if len(kv) != 2:
+                raise Exception("Invalid key-value pair: %s" % argv[i])
+            k, v = kv[0], kv[1]
+            match.append({
+                "match": {
+                    k: v
+                }
+            })
+        
+        query = json.dumps({
+            "query": {
+                "bool": {
+                    "filter": match
                 }
             }
         })
