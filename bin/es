@@ -1440,6 +1440,7 @@ class ES:
         """must-match <index> <kv1> [<kv2>]"""
 
         index = self.__argv(argv, 0)
+        size  = self.options["size"]
 
         match = []
         for i in range(1, len(argv)):
@@ -1460,12 +1461,13 @@ class ES:
                 }
             }
         })
-        self.__run("%s/_search?pretty" % index, "POST", data=query)
+        self.__run("%s/_search?pretty&size=%s" % (index, size), "POST", data=query)
 
     def should_match(self, argv = []):
         """should-match <index> <kv1> [<kv2>]"""
 
         index = self.__argv(argv, 0)
+        size  = self.options["size"]
 
         match = []
         for i in range(1, len(argv)):
@@ -1486,12 +1488,13 @@ class ES:
                 }
             }
         })
-        self.__run("%s/_search?pretty" % index, "POST", data=query)
+        self.__run("%s/_search?pretty&size=%s" % (index, size), "POST", data=query)
 
     def filter(self, argv = []):
         """filter <index> <kv1> [<kv2>]"""
 
         index = self.__argv(argv, 0)
+        size  = self.options["size"]
 
         match = []
         for i in range(1, len(argv)):
@@ -1500,8 +1503,8 @@ class ES:
                 raise Exception("Invalid key-value pair: %s" % argv[i])
             k, v = kv[0], kv[1]
             match.append({
-                "match": {
-                    k: v
+                "terms": {
+                    k: [v]
                 }
             })
         
@@ -1512,7 +1515,7 @@ class ES:
                 }
             }
         })
-        self.__run("%s/_search?pretty" % index, "POST", data=query)
+        self.__run("%s/_search?pretty&size=%s" % (index, size), "POST", data=query)
 
     def index(self, argv = []):
         """index <index> id field_1 field_2 ... < file"""
