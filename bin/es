@@ -1755,8 +1755,8 @@ class ES:
         field   = self.__argv(argv, 2)
         value   = self.__argv(argv, 3)
 
-        # Handle the empty array vs string.
-        if value != "[]":
+        # Add quotation around strings, and skip otherwise.
+        if value and value[0] != "[":
             value = '"%s"' % value
 
         data = """{
