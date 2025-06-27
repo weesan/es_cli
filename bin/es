@@ -261,8 +261,10 @@ class ES:
             func(argv)
         except KeyError as err:
             print("Missing %s" % err, file=sys.stderr)
+            sys.exit(-1)
         except sp.CalledProcessError as err:
             print("Is ES running on %s?" % self.__url(), file=sys.stderr)
+            sys.exit(-2)
         except Exception as err:
             raise(err)
 
