@@ -143,6 +143,7 @@ class ES:
             "write-mode":             self.write_mode,
             "exists":                 self.exists,
             "not-exists":             self.not_exists,
+            "not-null":               self.not_null,
             "aggs":                   self.aggs,
             # Experiment commands.
             "must-match":             self.must_match,
@@ -936,6 +937,8 @@ class ES:
 
             if old_index:
                 cmd["actions"] += [{"remove": { "index": old_index, "alias": a }} for a in aliases]
+                
+            self.__run("_aliases", "POST", data=json.dumps(cmd));
 
     def unalias(self, argv = []):
         """unalias <index_name> <alias>"""
@@ -1409,13 +1412,33 @@ class ES:
               "bool": {
                 "must_not": {
                   "exists": {
-                      "field": "%s"
+                    "field": "%s"
                   }
                 }
               }
             },
             "size": %s
         }""" % (field, self.options["size"])
+        self.__run("%s/_search?pretty" % index, data = query)
+
+    def not_null(self, argv = []):
+        """not-null <index> <field>"""
+        index = self.__argv(argv, 0)
+        field = self.__argv(argv, 1)
+        query = """{
+          "query": {
+            "bool": {
+              "must": [{
+                "script": {
+                  "script": {
+                    "source": "doc.containsKey('%s') && doc['%s'].size() > 0"
+                  }
+                }
+              }]
+            }
+          },
+          "size": %s
+        }""" % (field, field, self.options["size"])
         self.__run("%s/_search?pretty" % index, data = query)
 
     # Only works with keyword fields.
