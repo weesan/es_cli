@@ -159,6 +159,7 @@ class ES:
             "post":                   self.post,
             "search":                 self.search,
             "update":                 self.update,
+            "update-by-query":        self.update_by_query,
             "suggest":                self.suggest,
             "prefix-search":          self.prefix_search,
             "rank-feature":           self.rank_feature,
@@ -1768,6 +1769,33 @@ class ES:
         }""" % (field, value)
 
         self.__run("%s/_update/%s" % (index, doc_id), method="POST", data=data)
+
+    # https://www.elastic.co/guide/en/elasticsearch/reference/8.18/docs-update-by-query.html
+    def update_by_query(self, argv = []):
+        """update-by-query <index> <field-key> <field-value> <key> <value> <threshold>"""
+        index       = self.__argv(argv, 0)
+        field_key   = self.__argv(argv, 1)
+        field_value = self.__argv(argv, 2)
+        key         = self.__argv(argv, 3)
+        value       = self.__argv(argv, 4)
+        threshold   = self.__argv(argv, 5, "-1")
+
+        # Add quotation around strings, and skip otherwise.
+        if value and value[0] != "[":
+            value = '"%s"' % value
+
+        data = """{
+            "query": {
+              "term": {
+                "%s": "%s"
+              }
+            },
+            "script": {
+              "source": "ctx._source['%s'] = %s"
+            }
+        }""" % (field_key, field_value, key, value)
+
+        self.__run("%s/_update_by_query?requests_per_second=%s" % (index, threshold), method="POST", data=data, pipe="jq")
 
     def suggest(self, argv = []):
         """suggest <index> <term> <field> <fuzziness> [<country1> <country2> ...]"""
