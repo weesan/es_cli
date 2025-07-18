@@ -149,6 +149,7 @@ class ES:
             "must-match":             self.must_match,
             "should-match":           self.should_match,
             "filter":                 self.filter,
+            "must-not":               self.must_not,
             "index":                  self.index,
             "index-json":             self.index_json,
             "index-dump":             self.index_dump,
@@ -1538,6 +1539,33 @@ class ES:
             "query": {
                 "bool": {
                     "filter": match
+                }
+            }
+        })
+        self.__run("%s/_search?pretty&size=%s" % (index, size), "POST", data=query)
+
+    def must_not(self, argv = []):
+        """must-not <index> <kv1> [<kv2>]"""
+
+        index = self.__argv(argv, 0)
+        size  = self.options["size"]
+
+        match = []
+        for i in range(1, len(argv)):
+            kv = argv[i].split(":")
+            if len(kv) != 2:
+                raise Exception("Invalid key-value pair: %s" % argv[i])
+            k, v = kv[0], kv[1]
+            match.append({
+                "match": {
+                    k: v
+                }
+            })
+        
+        query = json.dumps({
+            "query": {
+                "bool": {
+                    "must_not": match
                 }
             }
         })
