@@ -51,6 +51,7 @@ class ES:
             "set-disk-allocation":    self.set_disk_allocation,
             "throttle":               self.throttle,
             "search-queue-size":      self.search_queue_size,
+            "search-size":            self.search_size,
             "bulk-queue-size":        self.bulk_queue_size,
             "index-queue-size":       self.index_queue_size,
             "set-s3-repo":            self.set_s3_repo,
@@ -83,8 +84,8 @@ class ES:
             "create-script":          self.create_script,
             "delete-script":          self.delete_script,
             "search-timeout":         self.search_timeout,
-            "create-user":            self.create_user,
             "create-meta":            self.create_meta,
+            "geoip":                  self.geoip,
             # Node commands.
             "nodes":                  self.nodes,
             "nodes-stats":            self.nodes_stats,
@@ -138,13 +139,13 @@ class ES:
             "move-primary-shard":     self.move_primary_shard,
             "random-shuffle":         self.random_shuffle,
             "max-result-window":      self.max_result_window,
-            "read-only-allow-delete": self.read_only_allow_delete,
             "read-mode":              self.read_mode,
             "write-mode":             self.write_mode,
             "exists":                 self.exists,
             "not-exists":             self.not_exists,
             "not-null":               self.not_null,
             "aggs":                   self.aggs,
+            "read-only":              self.read_only,
             # Experiment commands.
             "must-match":             self.must_match,
             "should-match":           self.should_match,
@@ -184,6 +185,18 @@ class ES:
             "api-keys":               self.api_keys,
             "create-api-key":         self.create_api_key,
             "delete-api-key":         self.delete_api_key,
+            # Security
+            "user":                   self.user,
+            "create-user":            self.create_user,
+            "create-superuser":       self.create_superuser,
+            "delete-user":            self.delete_user,
+            "role":                   self.role,
+            "delete-role":            self.delete_role,
+            "create-super-role":      self.create_super_role,
+            "role-mapping":           self.role_mapping,
+            "create-role-mapping":    self.create_role_mapping,
+            "delete-role-mapping":    self.delete_role_mapping,
+            "privilege":              self.privilege,
         }
 
     def __silent(self, on_off):
@@ -212,7 +225,7 @@ class ES:
         curl = "curl -sk -X%s" % method
 
         # ESv6 or greater requires content-type header.
-        if not self.options["v2"] and method in [ "POST", "PUT", "GET" ]:
+        if not self.options["v2"] and method in [ "POST", "PUT", "GET", "DELETE" ]:
             curl += " -H 'Content-Type: application/json'"
 
         # Host, port and path.
@@ -375,7 +388,7 @@ class ES:
 
     def cluster_settings(self, argv = []):
         """cluster-settings"""
-        self.__run("_cluster/settings?pretty")
+        self.__run("_cluster/settings?include_defaults&pretty")
 
     def merge_stats(self, argv = []):
         """merge-stats"""
@@ -535,6 +548,19 @@ class ES:
         ''' % size
         self.__run("_cluster/settings?pretty", method = "PUT", data = settings)
 
+    # Not working >= ES6 since those needs to be in the .yml config file.
+    def search_size(self, argv = []):
+        """search-size <int>"""
+        size = self.__argv(argv, 0)
+        settings = '''
+            {
+                 "transient": {
+                     "threadpool.search.size" : "%s"
+                }
+            }
+        ''' % size
+        self.__run("_cluster/settings?pretty", method = "PUT", data = settings)
+
     def bulk_queue_size(self, argv = []):
         """bulk-queue-size <int> (to be implemented)"""
 
@@ -662,7 +688,8 @@ class ES:
         """snapshot-progress <repo-name>"""
         repo = self.__argv(argv, 0)
         snapshot_id = self.__argv(argv, 1, "_all")
-        self.__run("_snapshot/%s/%s/_status?pretty" % (repo, snapshot_id), pipe="jq '.snapshots[].stats|.processed.size_in_bytes/.total.size_in_bytes'")
+        #self.__run("_snapshot/%s/%s/_status?pretty" % (repo, snapshot_id), pipe="jq '.snapshots[].stats|.processed.size_in_bytes/.total.size_in_bytes'")
+        self.__run("_snapshot/%s/%s/_status?pretty" % (repo, snapshot_id), pipe="jq '.snapshots[].stats|.incremental.size_in_bytes/.total.size_in_bytes'")
 
     def slm(self, argv = []):
         """slm <policy-name>"""
@@ -816,20 +843,6 @@ class ES:
         ''' % timeout
         self.__run("_cluster/settings?pretty", method = "PUT", data = settings)
 
-    def create_user(self, argv = []):
-        """create-user <username> <password>"""
-        username = self.__argv(argv, 0)
-        password = self.__argv(argv, 1)
-        role     = self.__argv(argv, 2, "superuser")
-        settings = '''
-        {
-            "password": "%s",
-            "roles": [ "%s" ]
-        }
-        ''' % (password, role)
-        self.__run("_security/user/%s?pretty" % username,
-                   method = "POST", data = settings)
-
     def create_meta(self, argv = []):
         """create-meta index json-str"""
         index = self.__argv(argv, 0)
@@ -839,6 +852,23 @@ class ES:
         }
         self.__run("%s/_mapping" % index, method = "PUT",
                    data = json.dumps(_meta))
+
+    def geoip(self, argv=[]):
+        """geoip [<enable>|<disable>]"""
+        toggle = self.__argv(argv, 0)
+
+        if toggle == "enable":
+            enable = True
+        elif toggle == "disable":
+            enable = False
+
+        settings = json.dumps({
+            "persistent": {
+                "ingest.geoip.downloader.enabled": enable
+            }
+        })
+
+        self.__run("_cluster/settings?pretty", "PUT", data=settings)
 
     def nodes(self, argv = []):
         """nodes [-o [heap|ram|cpu]]"""
@@ -941,7 +971,7 @@ class ES:
 
             if old_index:
                 cmd["actions"] += [{"remove": { "index": old_index, "alias": a }} for a in aliases]
-                
+
             self.__run("_aliases", "POST", data=json.dumps(cmd));
 
     def unalias(self, argv = []):
@@ -1376,9 +1406,6 @@ class ES:
     def max_result_window(self, argv = []):
         """max-result-window <index> <num>"""
 
-    def read_only_allow_delete(self, argv = []):
-        """read-only-allow-delete <index> [true|false]"""
-
     def read_mode(self, argv = []):
         """read-mode <index>"""
         index = self.__argv(argv, 0)
@@ -1463,6 +1490,16 @@ class ES:
         }""" % (field, self.options["size"])
         self.__run("%s/_search?pretty" % index, data = query)
 
+    def read_only(self, argv = []):
+        """read-only <index>"""
+        index = self.__argv(argv, 0)
+        settings = """{
+          "index": {
+            "blocks.write": true
+          }
+        }"""
+        self.__run("%s/_settings?pretty" % index, method="PUT", data=settings)
+
     def must_match(self, argv = []):
         """must-match <index> <kv1> [<kv2>]"""
 
@@ -1480,7 +1517,7 @@ class ES:
                     k: v
                 }
             })
-        
+
         query = json.dumps({
             "query": {
                 "bool": {
@@ -1507,7 +1544,7 @@ class ES:
                     k: v
                 }
             })
-        
+
         query = json.dumps({
             "query": {
                 "bool": {
@@ -1534,7 +1571,7 @@ class ES:
                     k: [v]
                 }
             })
-        
+
         query = json.dumps({
             "query": {
                 "bool": {
@@ -1561,7 +1598,7 @@ class ES:
                     k: v
                 }
             })
-        
+
         query = json.dumps({
             "query": {
                 "bool": {
@@ -2039,15 +2076,123 @@ class ES:
             "name": name,
             "expiration": expiration,
         })
-        self.__run("_security/api_key", "POST", data = req)
+        self.__run("_security/api_key", "POST", data=req)
 
-    # XXX: Not working.
     def delete_api_key(self, argv = []):
         """delete-api-key <user> <key-id>"""
         user = self.__argv(argv, 0)
-        key_id = self.__argv(argv, 1, "1d")
+        key_id = self.__argv(argv, 1)
 
-        self.__run("api/v1/users/%s/auth/keys/%s" % (user, key_id), "DELETE")
+        #self.__run("api/v1/users/%s/auth/keys/%s" % (user, key_id), "DELETE")
+        req = json.dumps({
+          "ids": [key_id]
+        })
+        self.__run("_security/api_key", "DELETE", data=req)
+
+    def user(self, argv = []):
+        """user [<user>]"""
+        user = self.__argv(argv, 0)
+
+        if user:
+            self.__run("_security/user/%s?pretty" % user)
+        else:
+            self.__run("_security/user?pretty")
+
+    def create_user(self, argv = []):
+        """create-user <username> <password> <roles>"""
+        username = self.__argv(argv, 0)
+        password = self.__argv(argv, 1)
+        roles    = self.__argvs(argv, 2, ["superuser"])
+        settings = json.dumps({
+          "password": password,
+          "roles": roles
+        })
+
+        self.__run("_security/user/%s?pretty" % username,
+                   method="POST", data=settings)
+
+    def delete_user(self, argv = []):
+        """delete-user <username>"""
+        username = self.__argv(argv, 0)
+
+        self.__run("_security/user/%s?pretty" % username, "DELETE")
+
+    def create_superuser(self, argv = []):
+        """create-superuser <username> <password>"""
+        username = self.__argv(argv, 0)
+        password = self.__argv(argv, 1)
+
+        self.create_super_role(["superpower"])
+        self.create_user([username, password, "superuser", "superpower"])
+
+    def role(self, argv = []):
+        """role [<role>]"""
+        role = self.__argv(argv, 0)
+
+        if role:
+            self.__run("_security/role/%s?pretty" % role)
+        else:
+            self.__run("_security/role?pretty")
+
+    def delete_role(self, argv = []):
+        """delete-role [<role>]"""
+        role = self.__argv(argv, 0)
+
+        self.__run("_security/role/%s?pretty" % role, "DELETE")
+
+    def create_super_role(self, argv = []):
+        """create-super-role [<role>]"""
+        role = self.__argv(argv, 0)
+
+        settings = json.dumps({
+            "indices": [{
+                "names": [ "*", ".*" ],
+                "privileges": [ "all" ],
+                "allow_restricted_indices": True
+            }]
+        })
+        self.__run("_security/role/%s?pretty" % role, "POST", data=settings)
+
+    def role_mapping(self, argv = []):
+        """role-mapping [<user>]"""
+        user = self.__argv(argv, 0)
+
+        if user:
+            self.__run("_security/role_mapping/%s?pretty" % user)
+        else:
+            self.__run("_security/role_mapping?pretty")
+
+    def create_role_mapping(self, argv = []):
+        """create-role-mapping <name> <user> <role>"""
+        name = self.__argv(argv, 0)
+        user = self.__argv(argv, 1)
+        role = self.__argv(argv, 2)
+
+        mappings = """{
+          "rules": {
+            "field": { "username": "%s" }
+          },
+          "roles": [ "%s" ],
+          "enabled": true
+        }""" % (user, role)
+        self.__run("_security/role_mapping/%s?pretty" % name,
+                   method="POST", data=mappings)
+
+    def delete_role_mapping(self, argv = []):
+        """delete-role-mapping <name>"""
+        name = self.__argv(argv, 0)
+
+        self.__run("_security/role_mapping/%s?pretty" % name, method="DELETE")
+
+    def privilege(self, argv = []):
+        """privilege [<user>]"""
+        user = self.__argv(argv, 0)
+
+        if user:
+            self.__run("_security/user/_privileges/%s?pretty" % role)
+        else:
+            self.__run("_security/user/_privileges?pretty")
+
 
 # The main function.
 if __name__ == "__main__":
