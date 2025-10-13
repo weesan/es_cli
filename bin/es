@@ -103,6 +103,7 @@ class ES:
             ## Index commands.
             "create-index":           self.create_index,
             "alias":                  self.alias,
+            "alias-with-filter":      self.alias_with_filter,
             "unalias":                self.unalias,
             "stats":                  self.stats,
             "index-rate":             self.index_rate,
@@ -973,6 +974,35 @@ class ES:
                 cmd["actions"] += [{"remove": { "index": old_index, "alias": a }} for a in aliases]
 
             self.__run("_aliases", "POST", data=json.dumps(cmd));
+
+    def alias_with_filter(self, argv = []):
+        """alias-with-filter <index_name> <alias1[,alias2]> <must|must_not> <key> <value>"""
+        index = self.__argv(argv, 0)
+        alias = self.__argv(argv, 1)
+        must = self.__argv(argv, 2)
+        key = self.__argv(argv, 3)
+        value = self.__argv(argv, 4)
+
+        aliases = alias.split(",")
+        cmd = {
+            "actions": [{
+                "add": {
+                    "index": index,
+                    "alias": a,
+                    "filter": {
+                        "bool": {
+                            must: [{
+                                "terms": {
+                                    key: [ value ]
+                                }
+                            }]
+                        }
+                    }
+                }
+            } for a in aliases]
+        }
+
+        self.__run("_aliases", "POST", data=json.dumps(cmd));
 
     def unalias(self, argv = []):
         """unalias <index_name> <alias>"""
