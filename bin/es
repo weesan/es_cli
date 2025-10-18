@@ -173,6 +173,7 @@ class ES:
             "grep":                   self.grep,
             # Delete a doc
             "delete":                 self.delete,
+            "delete-by-query":        self.delete_by_query,
             # LTR plugin
             # https://elasticsearch-learning-to-rank.readthedocs.io/en/latest/building-features.html
             "ltr-featureset":         self.ltr_featureset,
@@ -2050,6 +2051,21 @@ class ES:
         id    = self.__argv(argv, 1)
         type  = self.__argv(argv, 2, "_doc")
         self.__run("%s/%s/%s" % (index, type, id), "DELETE")
+
+    def delete_by_query(self, argv = []):
+        """delete-by-query <index> <key> <value>"""
+        index = self.__argv(argv, 0)
+        key   = self.__argv(argv, 1)
+        value = self.__argv(argv, 2)
+
+        query = json.dumps({
+            "query": {
+                "match": {
+                    key: value
+                }
+            }
+        })
+        self.__run("%s/_delete_by_query" % index, "POST", data=query, pipe="jq")
 
     def ltr_featureset(self, argv = []):
         """ltr-featureset <feature>"""
