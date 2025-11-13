@@ -977,10 +977,10 @@ class ES:
             self.__run("_aliases", "POST", data=json.dumps(cmd));
 
     def alias_with_filter(self, argv = []):
-        """alias-with-filter <index_name> <alias1[,alias2]> <must|must_not> <key> <value>"""
+        """alias-with-filter <index_name> <alias1[,alias2]> <filter|must_not> <key> <value>"""
         index = self.__argv(argv, 0)
         alias = self.__argv(argv, 1)
-        must = self.__argv(argv, 2)
+        filter_or_must_not = self.__argv(argv, 2)
         key = self.__argv(argv, 3)
         value = self.__argv(argv, 4)
 
@@ -992,7 +992,7 @@ class ES:
                     "alias": a,
                     "filter": {
                         "bool": {
-                            must: [{
+                            filter_or_must_not: [{
                                 "terms": {
                                     key: [ value ]
                                 }
