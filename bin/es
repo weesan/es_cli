@@ -368,7 +368,10 @@ class ES:
 
     def aliases(self, argv = []):
         """aliases"""
-        self.__run("_cat/aliases?v")
+        if self.options["verbose"]:
+            self.__run("_cat/aliases?v")
+        else:
+            self.__run("_cat/aliases?v", pipe="grep -v '^\.'")
 
     def plugins(self, argv = []):
         """plugins"""
