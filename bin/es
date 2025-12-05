@@ -1650,7 +1650,7 @@ class ES:
         index_info = {
             "index": {
                 "_index": index,
-                "_type": "_doc"
+                #"_type": "_doc"
             }
         }
 
