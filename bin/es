@@ -148,6 +148,7 @@ class ES:
             "aggs":                   self.aggs,
             "read-only":              self.read_only,
             "enable-id-field-data":   self.enable_id_field_data,
+            "version":                self.version,
             # Experiment commands.
             "must-match":             self.must_match,
             "should-match":           self.should_match,
@@ -1098,7 +1099,7 @@ class ES:
     def settings(self, argv = []):
         """settings [<index>]"""
         index = self.__argv(argv, 0)
-        self.__run("%s/_settings?pretty&human" % index)
+        self.__run("%s/_settings?pretty" % index)
 
     def cache_info(self, argv = []):
         """cache-info"""
@@ -1535,6 +1536,7 @@ class ES:
         self.__run("%s/_settings?pretty" % index, method="PUT", data=settings)
 
     def enable_id_field_data(self, argv = []):
+        """enable-id-field-data"""
         settings = '''{
             "persistent": {
                 "indices.id_field_data.enabled": true
@@ -1542,6 +1544,12 @@ class ES:
         }'''
         self.__run("_cluster/settings?pretty", method="PUT", data=settings)
 
+    def version(self, argv = []):
+        """version <index>"""
+        index = self.__argv(argv, 0)
+
+        self.__run("%s/_settings?human" % index,
+                   pipe="jq -r .[].settings.index.version.created_string")
 
     def must_match(self, argv = []):
         """must-match <index> <kv1> [<kv2>]"""
