@@ -147,6 +147,7 @@ class ES:
             "not-null":               self.not_null,
             "aggs":                   self.aggs,
             "read-only":              self.read_only,
+            "enable-id-field-data":   self.enable_id_field_data,
             # Experiment commands.
             "must-match":             self.must_match,
             "should-match":           self.should_match,
@@ -1097,7 +1098,7 @@ class ES:
     def settings(self, argv = []):
         """settings [<index>]"""
         index = self.__argv(argv, 0)
-        self.__run("%s/_settings?pretty" % index)
+        self.__run("%s/_settings?pretty&human" % index)
 
     def cache_info(self, argv = []):
         """cache-info"""
@@ -1532,6 +1533,15 @@ class ES:
           }
         }"""
         self.__run("%s/_settings?pretty" % index, method="PUT", data=settings)
+
+    def enable_id_field_data(self, argv = []):
+        settings = '''{
+            "persistent": {
+                "indices.id_field_data.enabled": true
+            }
+        }'''
+        self.__run("_cluster/settings?pretty", method="PUT", data=settings)
+
 
     def must_match(self, argv = []):
         """must-match <index> <kv1> [<kv2>]"""
