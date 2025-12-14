@@ -792,7 +792,7 @@ class ES:
 
     def license(self, argv = []):
         """license"""
-        self.__run("_xpack/license")
+        self.__run("_license")
 
     def watermark(self, argv = []):
         """watermark <low> <high>"""
