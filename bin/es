@@ -692,11 +692,15 @@ class ES:
         self.__run("_snapshot/%s/%s/_status?pretty" % (repo, snapshot_id))
 
     def snapshot_progress(self, argv = []):
-        """snapshot-progress <repo-name>"""
+        """snapshot-progress <repo-name> [<snapshot_id>] [<incremental>]"""
         repo = self.__argv(argv, 0)
         snapshot_id = self.__argv(argv, 1, "_all")
-        #self.__run("_snapshot/%s/%s/_status?pretty" % (repo, snapshot_id), pipe="jq '.snapshots[].stats|.processed.size_in_bytes/.total.size_in_bytes'")
-        self.__run("_snapshot/%s/%s/_status?pretty" % (repo, snapshot_id), pipe="jq '.snapshots[].stats|.incremental.size_in_bytes/.total.size_in_bytes'")
+        incremental = self.__argv(argv, 2, "false")
+
+        if incremental == "true":
+            self.__run("_snapshot/%s/%s/_status?pretty" % (repo, snapshot_id), pipe="jq '.snapshots[].stats|.incremental.size_in_bytes/.total.size_in_bytes'")
+        else:
+            self.__run("_snapshot/%s/%s/_status?pretty" % (repo, snapshot_id), pipe="jq '.snapshots[].stats|.processed.size_in_bytes/.total.size_in_bytes'")
 
     def slm(self, argv = []):
         """slm <policy-name>"""
