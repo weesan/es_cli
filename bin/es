@@ -163,6 +163,7 @@ class ES:
             "put":                    self.put,
             "post":                   self.post,
             "search":                 self.search,
+            "mget":                   self.mget,
             "update":                 self.update,
             "update-by-query":        self.update_by_query,
             "suggest":                self.suggest,
@@ -403,7 +404,7 @@ class ES:
 
     def thread_pool(self, argv = []):
         """thread-pool"""
-        self.__run("_cat/thread_pool?v")
+        self.__run("_cat/thread_pool?v&h=node_name,name,size,active,queue,rejected")
 
     def load(self, argv = []):
         """load (to be implemented)"""
@@ -1885,6 +1886,12 @@ class ES:
         explain = self.options["explain"]
 
         self.__run("%s/_search?pretty&from=%s&size=%s&human=%s&request_cache=%s&explain=%s" % (index, f, size, human, rc, explain), data="@-")
+
+    def mget(self, argv = []):
+        """mget <index>           < file"""
+        index   = self.__argv(argv, 0, "")
+
+        self.__run("%s/_mget?pretty" % index, data="@-")
 
     def update(self, argv = []):
         """update <index> <doc_id> <field> <value>"""
