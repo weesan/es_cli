@@ -968,17 +968,32 @@ class ES:
         self.__run("%s" % index, "PUT")
 
     def alias(self, argv = []):
-        """alias <index_name> <alias1[,alias2]> [<old-index>]"""
+        """alias <index_name> <alias1[,alias2]> [<true|false>] [<old-index>]"""
         index = self.__argv(argv, 0, None)
         alias = self.__argv(argv, 1)
-        old_index = self.__argv(argv, 2, None)
+        writetable = self.__argv(argv, 2, False)
+        old_index = self.__argv(argv, 3, None)
 
         if index == "-" or index == None:
             self.__run("_aliases", "POST", data="@-")
         else:
             aliases = alias.split(",")
             cmd = {}
-            cmd["actions"] = [{"add": {"index": index, "alias": a}} for a in aliases]
+            if writetable:
+                cmd["actions"] = [{
+                    "add": {
+                        "index": index,
+                        "alias": a,
+                        "is_write_index": True,
+                    }
+                } for a in aliases]
+            else:
+                cmd["actions"] = [{
+                    "add": {
+                        "index": index,
+                        "alias": a,
+                    }
+                } for a in aliases]
 
             if old_index:
                 cmd["actions"] += [{"remove": { "index": old_index, "alias": a }} for a in aliases]
