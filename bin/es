@@ -2109,7 +2109,7 @@ class ES:
 
         # If it's nested query, use post, otherwise, use query string.
         kv = term.split(":")
-        if len(kv) >= 2 and "." in kv[0]:
+        if len(kv) >= 2 and "." in kv[0] and self.options["nested"]:
             field = kv[0].split(".")
             query = json.dumps({
                 "query": {
@@ -2339,6 +2339,7 @@ if __name__ == "__main__":
     cli.add_argument("-P", "--password", help="Password")
     cli.add_argument("-v", "--verbose", help="Verbosity", action="count")
     cli.add_argument("-z", "--size", help="Size", default=30)
+    cli.add_argument("-n", "--nested", help="Nested query", action="store_true")
     cli.add_argument("-f", help="From", default=0)
     cli.add_argument("--human", default=False, action="store_true",
                      help="Display human readable output")
@@ -2358,6 +2359,7 @@ if __name__ == "__main__":
         "method":         "GET",
         "v2":             False,
         "size":           args.size,
+        "nested":         args.nested,
         "from":           args.f,
         "max_bulk_bytes": 600000,
         "option":         args.option,
