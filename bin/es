@@ -149,6 +149,8 @@ class ES:
             "read-only":              self.read_only,
             "enable-id-field-data":   self.enable_id_field_data,
             "version":                self.version,
+            "slow-log-settings":      self.slow_log_settings,
+            "enable-slow-log":        self.enable_slow_log,
             # Experiment commands.
             "must-match":             self.must_match,
             "should-match":           self.should_match,
@@ -1570,6 +1572,43 @@ class ES:
 
         self.__run("%s/_settings?human" % index,
                    pipe="jq -r .[].settings.index.version.created_string")
+
+    def slow_log_settings(self, argv = []):
+        """slow-log-settings"""
+
+        self.__run("_all/_settings?pretty&expand_wildcards=all&filter_path=*.settings.index.*.slowlog")
+
+    # eg. es enable-slow-log slow-idx 4s
+    def enable_slow_log(self, argv = []):
+        """enable-slow-log <index> <log-level> <threshold>"""
+        index = self.__argv(argv, 0)
+        log_level = self.__argv(argv, 1, None)
+        threshold = self.__argv(argv, 2, None)
+
+        if log_level == None:
+            settings = '''{
+                "persistent": {
+                    "logger.org.elasticsearch.slowlog": null
+                }
+            }'''
+        else:
+            settings = '''{
+                "persistent": {
+                    "logger.org.elasticsearch.slowlog": "%s"
+                }
+            }''' % log_level
+        self.__run("_cluster/settings?pretty", method="PUT", data=settings)
+
+        if threshold == None:
+            settings = '''{
+                "index.search.slowlog.threshold.query.warn": null
+            }'''
+        else:
+            settings = '''{
+                "index.search.slowlog.threshold.query.warn": "%s"
+            }''' % threshold
+
+        self.__run("%s/_settings?pretty" % index, method="PUT", data=settings)
 
     def must_match(self, argv = []):
         """must-match <index> <kv1> [<kv2>]"""
