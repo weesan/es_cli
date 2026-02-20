@@ -974,7 +974,7 @@ class ES:
         """alias <index_name> <alias1[,alias2]> [<true|false>] [<old-index>]"""
         index = self.__argv(argv, 0, None)
         alias = self.__argv(argv, 1)
-        writetable = self.__argv(argv, 2, False)
+        writetable = self.__argv(argv, 2, "false")
         old_index = self.__argv(argv, 3, None)
 
         if index == "-" or index == None:
@@ -982,7 +982,7 @@ class ES:
         else:
             aliases = alias.split(",")
             cmd = {}
-            if writetable:
+            if writetable == "true":
                 cmd["actions"] = [{
                     "add": {
                         "index": index,
