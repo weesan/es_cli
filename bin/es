@@ -1789,6 +1789,10 @@ class ES:
         for line in sys.stdin:
             id += 1
 
+            # Skip blank lines.
+            if line == "\n": continue
+
+            # Load the json data.
             data = json.loads(line)
             if id_field:
                 _id = data[id_field]
