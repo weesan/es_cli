@@ -2137,7 +2137,8 @@ class ES:
             term  = urllib.parse.quote_plus(term)
             index = self.__argv(argv, 1)
             size  = self.options["size"]
-            self.__run("%s/_search?q=%s&pretty&size=%s" % (index, term, size))
+            f     = self.options["from"]
+            self.__run("%s/_search?q=%s&pretty&size=%s&from=%s" % (index, term, size, f))
 
     def delete(self, argv = []):
         """delete <index> <id> <type>"""
