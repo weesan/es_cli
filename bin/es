@@ -1779,10 +1779,11 @@ class ES:
 
     # Use bulk API to index a json input.
     def index_json(self, argv = []):
-        """index-json <index> [<id-field>] < json-file"""
+        """index-json <index> [<id-field>] [delete-id-field] < json-file"""
 
         index = self.__argv(argv, 0, None)
         id_field = self.__argv(argv, 1, None)
+        delete_id_field = self.__argv(argv, 2, "false")
         payload = ""
 
         id = 0
@@ -1794,6 +1795,7 @@ class ES:
 
             # Load the json data.
             data = json.loads(line)
+
             if id_field:
                 _id = data[id_field]
             else:
@@ -1803,6 +1805,9 @@ class ES:
 
             # Remove id from the data since we have _id.
             if "id" in data: del(data["id"])
+
+            # Remove the id-field
+            if delete_id_field == "true": del(data[id_field])
 
             # Don't need to index the index field if provided.
             if "index" in data:
