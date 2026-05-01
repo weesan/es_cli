@@ -1906,7 +1906,7 @@ class ES:
         """synonyms <index>         < file"""
 
     def get(self, argv = []):
-        """get <index>              < file"""
+        """get <index> [<id>]       < file"""
         index = self.__argv(argv, 0)
         id = self.__argv(argv, 1)
         if id:
@@ -2138,7 +2138,8 @@ class ES:
             index = self.__argv(argv, 1)
             size  = self.options["size"]
             f     = self.options["from"]
-            self.__run("%s/_search?q=%s&pretty&size=%s&from=%s" % (index, term, size, f))
+            sort  = self.options["sort"]
+            self.__run("%s/_search?q=%s&pretty&size=%s&from=%s&sort=%s" % (index, term, size, f, sort))
 
     def delete(self, argv = []):
         """delete <index> <id> <type>"""
@@ -2350,11 +2351,12 @@ if __name__ == "__main__":
     cli.add_argument("-v", "--verbose", help="Verbosity", action="count")
     cli.add_argument("-z", "--size", help="Size", default=30)
     cli.add_argument("-n", "--nested", help="Nested query", action="store_true")
-    cli.add_argument("-f", help="From", default=0)
+    cli.add_argument("-f", "--from", dest="offset", help="From", default=0)
+    cli.add_argument("-S", "--sort", help="Sort", default="")
     cli.add_argument("--human", default=False, action="store_true",
                      help="Display human readable output")
     cli.add_argument("-rc", "--request-cache", default=False, action="store_true",
-                     help="Enable request Cache")
+                     help="Enable request cache")
     cli.add_argument("command", type=str, help="Commands")
     cli.add_argument("argv", type=str, nargs="*", help="Arguments")
     args = cli.parse_args()
@@ -2370,7 +2372,8 @@ if __name__ == "__main__":
         "v2":             False,
         "size":           args.size,
         "nested":         args.nested,
-        "from":           args.f,
+        "from":           args.offset,
+        "sort":           args.sort,
         "max_bulk_bytes": 600000,
         "option":         args.option,
         "human":          args.human,
