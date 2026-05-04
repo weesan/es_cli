@@ -1316,9 +1316,14 @@ class ES:
         """exclude <index> <tag> <bin>"""
 
     def dump(self, argv = []):
-        """dump <index>"""
+        """dump <index> [<shard]>"""
         index = self.__argv(argv, 0)
+        shard = self.__argv(argv, 1, "")
         size  = self.options["size"]
+
+        if shard != "":
+            shard += "_shards:" + shard
+
         query = """
         {
             "query": {
@@ -1330,7 +1335,7 @@ class ES:
         silent = self.__silent(True)
 
         # Get the 1st batch.
-        res = self.__run("%s/_search?pretty&size=%s&scroll=1m" % (index, size),
+        res = self.__run("%s/_search?pretty&size=%s&scroll=1m&preference=%s" % (index, size, shard),
                          method = "POST", data = query)
         data = json.loads(res)
 
@@ -1358,7 +1363,7 @@ class ES:
 
         while True:
             # Get the next batch.
-            res = self.__run("_search/scroll?pretty",
+            res = self.__run("_search/scroll?pretty&preference=%s" % shard,
                              method = "POST", data = query)
             data = json.loads(res)
 
