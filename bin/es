@@ -172,6 +172,7 @@ class ES:
             "prefix-search":          self.prefix_search,
             "rank-feature":           self.rank_feature,
             "sql":                    self.sql,
+            "sql-translate":          self.sql_translate,
             # Unix-like commands.
             "ls":                     self.ls,
             "cat":                    self.cat,
@@ -2077,6 +2078,18 @@ class ES:
         }
         ''' % sql
         self.__run("_sql?format=txt", data=query)
+
+    def sql_translate(self, argv = []):
+        """sql-translate <sql>"""
+        sql   = self.__argv(argv, 0)
+        sql = sql.replace("\"", "\\\"")
+
+        query = '''
+        {
+            "query": "%s"
+        }
+        ''' % sql
+        self.__run("_sql/translate?format=txt", data=query)
 
     def ls(self, argv = []):
         """ls [<index>] [-o <index|docs|size>]]"""
