@@ -171,6 +171,7 @@ class ES:
             "suggest":                self.suggest,
             "prefix-search":          self.prefix_search,
             "rank-feature":           self.rank_feature,
+            "sql":                    self.sql,
             # Unix-like commands.
             "ls":                     self.ls,
             "cat":                    self.cat,
@@ -2040,7 +2041,7 @@ class ES:
             "size": %s
         }
         ''' % (field, term, self.options["from"], self.options["size"])
-        self.__run("%s/_search?pretty" % index, data = query)
+        self.__run("%s/_search?pretty" % index, data=query)
 
     # XXX
     def rank_feature(self, argv = []):
@@ -2063,7 +2064,19 @@ class ES:
             "size": %s
         }
         '''% (field, feature, self.options["from"], self.options["size"])
-        self.__run("%s/_search?pretty" % index, data = query)
+        self.__run("%s/_search?pretty" % index, data=query)
+
+    def sql(self, argv = []):
+        """sql <sql>"""
+        sql   = self.__argv(argv, 0)
+        sql = sql.replace("\"", "\\\"")
+
+        query = '''
+        {
+            "query": "%s"
+        }
+        ''' % sql
+        self.__run("_sql?format=txt", data=query)
 
     def ls(self, argv = []):
         """ls [<index>] [-o <index|docs|size>]]"""
