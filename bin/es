@@ -339,7 +339,7 @@ class ES:
         index = self.__argv(argv, 0)
 
         if index: index += "*"
-        pipe = None if index else "grep -v '^\.'"
+        pipe = None if index else "grep -v '^\\.'"
 
         sort = self.options["option"] or "index"
 
@@ -378,7 +378,7 @@ class ES:
         if self.options["verbose"]:
             self.__run("_cat/aliases?v")
         else:
-            self.__run("_cat/aliases?v", pipe="grep -v '^\.'")
+            self.__run("_cat/aliases?v", pipe="grep -v '^\\.'")
 
     def plugins(self, argv = []):
         """plugins"""
@@ -2096,7 +2096,7 @@ class ES:
         index = self.__argv(argv, 0)
 
         if index: index += "*"
-        pipe = None if index or self.options["all"] else "grep -v '^\.'"
+        pipe = None if index or self.options["all"] else "grep -v '^\\.'"
 
         sort = self.options["option"] or "index"
         if sort == "docs":
