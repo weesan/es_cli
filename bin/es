@@ -37,6 +37,7 @@ class ES:
             "cluster-settings":       self.cluster_settings,
             "merge-stats":            self.merge_stats,
             "thread-pool":            self.thread_pool,
+            "thread-pool-summary":    self.thread_pool_summary,
             "load":                   self.load,
             "cpu-load":               self.cpu_load,
             "create-mappings":        self.create_mappings,
@@ -408,7 +409,11 @@ class ES:
 
     def thread_pool(self, argv = []):
         """thread-pool"""
-        self.__run("_cat/thread_pool?v&h=node_name,name,size,active,queue,rejected")
+        self.__run("_cat/thread_pool?v&s=n,nn&h=node_name,name,size,active,queue,rejected,completed")
+
+    def thread_pool_summary(self, argv = []):
+        """thread-pool-summary"""
+        self.__run("_cat/thread_pool/write,search?v&s=n,nn&h=node_name,name,queue,active,rejected,completed")
 
     def load(self, argv = []):
         """load (to be implemented)"""
