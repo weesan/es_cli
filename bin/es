@@ -90,6 +90,7 @@ class ES:
             # Node commands.
             "nodes":                  self.nodes,
             "nodes-stats":            self.nodes_stats,
+            "nodes-stats-summary":    self.nodes_stats_summary,
             "nodes-info":             self.nodes_info,
             "node":                   self.node,
             "os":                     self.os,
@@ -902,10 +903,16 @@ class ES:
         else:
             self.__run("_cat/nodes?v&s=name")
 
-    def nodes_stats(self, argv = [], pipe = None):
-        """nodes-stats"""
+    def nodes_stats(self, argv = []):
+        """nodes-stats [<node>]"""
         node = self.__argv(argv, 0)
-        self.__run("_nodes/%s/stats?pretty" % node, pipe = pipe)
+        self.__run("_nodes/%s/stats?pretty" % node)
+
+    def nodes_stats_summary(self, argv = []):
+        """nodes-stats-summary [<node>]"""
+        node = self.__argv(argv, 0)
+
+        self.__run("_nodes/%s/stats?pretty" % node, pipe='(echo "Node\tGet\tIndexing\tSearch"; jq -r "def round(n): . * pow(10; n) | round / pow(10; n); .nodes[]|[.name,((.indices.get.time_in_millis/.indices.get.total)|round(3)),((.indices.indexing.index_time_in_millis/.indices.indexing.index_total)|round(3)),((.indices.search.query_time_in_millis/.indices.search.query_total)|round(3))]|@tsv" | sort) | column -t')
 
     def nodes_info(self, argv = []):
         """nodes-info"""
