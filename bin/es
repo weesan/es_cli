@@ -60,6 +60,8 @@ class ES:
             "set-gcs-repo":           self.set_gcs_repo,
             "get-gcs-repo":           self.get_gcs_repo,
             "del-gcs-repo":           self.del_gcs_repo,
+            "set-fs-repo":            self.set_fs_repo,
+            "get-fs-repo":            self.get_fs_repo,
             "create-snapshot":        self.create_snapshot,
             "restore-snapshot":       self.restore_snapshot,
             "delete-snapshot":        self.delete_snapshot,
@@ -598,14 +600,14 @@ class ES:
         base_path = self.__argv(argv, 2)
         settings = '''
         {
-            "type": "gcs",
-            "settings": {
-              "bucket": "%s",
-              "base_path": "%s",
-              "compress": true,
-              "max_snapshot_bytes_per_sec": "100mb",
-              "max_restore_bytes_per_sec": "1024mb"
-            }
+          "type": "gcs",
+          "settings": {
+            "bucket": "%s",
+            "base_path": "%s",
+            "compress": true,
+            "max_snapshot_bytes_per_sec": "100mb",
+            "max_restore_bytes_per_sec": "1024mb"
+          }
         }
         ''' % (bucket, base_path)
         self.__run("_snapshot/%s?pretty" % repo,
@@ -620,6 +622,27 @@ class ES:
         """del-gcs-repo <repo-name>"""
         repo = self.__argv(argv, 0)
         self.__run("_snapshot/%s?pretty" % repo, method="DELETE")
+
+    def set_fs_repo(self, argv = []):
+        """set-fs-repo <repo-name> <path>"""
+        repo = self.__argv(argv, 0)
+        path = self.__argv(argv, 1)
+        settings = '''
+        {
+          "type": "fs",
+          "settings": {
+            "location": "%s",
+            "compress": true
+          }
+        }
+        ''' % path
+        self.__run("_snapshot/%s?pretty" % repo,
+                   method = "POST", data = settings)
+
+    def get_fs_repo(self, argv = []):
+        """get-fs-repo <repo-name>"""
+        repo = self.__argv(argv, 0)
+        self.__run("_snapshot/%s?pretty" % repo)
 
     def create_snapshot(self, argv = []):
         """create-snapshot  <repo-name> <snapshot-id> <indices>"""
