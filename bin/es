@@ -155,6 +155,7 @@ class ES:
             "version":                self.version,
             "slow-log-settings":      self.slow_log_settings,
             "enable-slow-log":        self.enable_slow_log,
+            "total-fields-limit":     self.total_fields_limit,
             # Experiment commands.
             "must-match":             self.must_match,
             "should-match":           self.should_match,
@@ -918,11 +919,11 @@ class ES:
     def nodes(self, argv = []):
         """nodes [-o [heap|ram|cpu]]"""
         if self.options["option"] == "heap":
-            self.__run("_cat/nodes?v&s=heapPercent")
+            self.__run("_cat/nodes?v&s=heapPercent:desc")
         elif self.options["option"] == "ram":
-            self.__run("_cat/nodes?v&s=ramPercent")
+            self.__run("_cat/nodes?v&s=ramPercent:desc")
         elif self.options["option"] == "cpu":
-            self.__run("_cat/nodes?v&s=cpu")
+            self.__run("_cat/nodes?v&s=cpu:desc")
         else:
             self.__run("_cat/nodes?v&s=name")
 
@@ -1087,7 +1088,8 @@ class ES:
     def stats(self, argv = []):
         """stats [<index>]"""
         index = self.__argv(argv, 0)
-        self.__run("%s/_stats?pretty" % index)
+        #self.__run("%s/_stats?pretty" % index)
+        self.__run("_cat/indices?v&s=search.query_time:desc&h=index,search.query_total,search.query_time,search.fetch_total,search.fetch_time", pipe="grep -v '^\.'")
 
     def index_rate(self, argv = []):
         """index-rate [<index>] [interval] [window_size]"""
@@ -1652,6 +1654,18 @@ class ES:
 
         self.__run("%s/_settings?pretty" % index, method="PUT", data=settings)
 
+    def total_fields_limit(self, argv = []):
+        """total-fields-limit"""
+        index = self.__argv(argv, 0)
+        limit = self.__argv(argv, 1, 1000)
+        settings = '''
+        {
+          "index.mapping.total_fields.limit": %s
+        }
+        ''' % limit
+
+        self.__run("%s/_settings" % index, method="PUT", data=settings)
+
     def must_match(self, argv = []):
         """must-match <index> <kv1> [<kv2>]"""
 
@@ -1660,7 +1674,7 @@ class ES:
 
         match = []
         for i in range(1, len(argv)):
-            kv = argv[i].split(":")
+            kv = argv[i].split(":", 1)
             if len(kv) != 2:
                 raise Exception("Invalid key-value pair: %s" % argv[i])
             k, v = kv[0], kv[1]
@@ -1687,7 +1701,7 @@ class ES:
 
         match = []
         for i in range(1, len(argv)):
-            kv = argv[i].split(":")
+            kv = argv[i].split(":", 1)
             if len(kv) != 2:
                 raise Exception("Invalid key-value pair: %s" % argv[i])
             k, v = kv[0], kv[1]
@@ -1714,7 +1728,7 @@ class ES:
 
         match = []
         for i in range(1, len(argv)):
-            kv = argv[i].split(":")
+            kv = argv[i].split(":", 1)
             if len(kv) != 2:
                 raise Exception("Invalid key-value pair: %s" % argv[i])
             k, v = kv[0], kv[1]
