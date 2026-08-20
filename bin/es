@@ -173,6 +173,8 @@ class ES:
             "mget":                   self.mget,
             "update":                 self.update,
             "update-by-query":        self.update_by_query,
+            "add-by-query":           self.add_by_query,
+            "del-by-query":           self.del_by_query,
             "suggest":                self.suggest,
             "prefix-search":          self.prefix_search,
             "rank-feature":           self.rank_feature,
@@ -2027,7 +2029,7 @@ class ES:
         threshold   = self.__argv(argv, 5, "-1")
 
         # Add quotation around strings, and skip otherwise.
-        if value and value[0] != "[":
+        if value and value[0] not in ["[", "{"]:
             value = '"%s"' % value
 
         data = """{
@@ -2037,7 +2039,71 @@ class ES:
               }
             },
             "script": {
-              "source": "ctx._source['%s'] = %s"
+              "source": "ctx._source.%s = params.data",
+              "lang": "painless",
+              "params": {
+                "data": %s
+              }
+            }
+        }""" % (field_key, field_value, key, value)
+
+        self.__run("%s/_update_by_query?requests_per_second=%s" % (index, threshold), method="POST", data=data, pipe="jq")
+
+    def add_by_query(self, argv = []):
+        """add-by-query <index> <field-key> <field-value> <key> <value> <threshold>"""
+        index       = self.__argv(argv, 0)
+        field_key   = self.__argv(argv, 1)
+        field_value = self.__argv(argv, 2)
+        key         = self.__argv(argv, 3)
+        value       = self.__argv(argv, 4)
+        threshold   = self.__argv(argv, 5, "-1")
+
+        # Add quotation around strings, and skip otherwise.
+        if value and value[0] not in ["[", "{"]:
+            value = '"%s"' % value
+
+        data = """{
+            "query": {
+              "term": {
+                "%s": "%s"
+              }
+            },
+            "script": {
+              "source": "if (!ctx._source.%s.contains(params.data)) { ctx._source.%s.add(params.data) }",
+              "lang": "painless",
+              "params": {
+                "data": %s
+              }
+            }
+        }""" % (field_key, field_value, key, key, value)
+
+        self.__run("%s/_update_by_query?requests_per_second=%s" % (index, threshold), method="POST", data=data, pipe="jq")
+
+    def del_by_query(self, argv = []):
+        """del-by-query <index> <field-key> <field-value> <key> <value> <threshold>"""
+        index       = self.__argv(argv, 0)
+        field_key   = self.__argv(argv, 1)
+        field_value = self.__argv(argv, 2)
+        key         = self.__argv(argv, 3)
+        value       = self.__argv(argv, 4)
+        threshold   = self.__argv(argv, 5, "-1")
+
+        # Add quotation around strings, and skip otherwise.
+        if value and value[0] not in ["[", "{"]:
+            value = '"%s"' % value
+
+        data = """{
+            "query": {
+              "term": {
+                "%s": "%s"
+              }
+            },
+            "script": {
+              "source": "ctx._source.%s.removeIf(v -> v instanceof String && v.contains(params.data))",
+              "lang": "painless",
+              "params": {
+                "data": %s
+              }
             }
         }""" % (field_key, field_value, key, value)
 
