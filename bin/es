@@ -176,6 +176,7 @@ class ES:
             "add-by-query":           self.add_by_query,
             "del-by-query":           self.del_by_query,
             "suggest":                self.suggest,
+            "prefix-match":           self.prefix_match,
             "prefix-search":          self.prefix_search,
             "rank-feature":           self.rank_feature,
             "sql":                    self.sql,
@@ -2138,8 +2139,8 @@ class ES:
         ''' % (term, field, fuzziness, json.dumps(country), self.options["size"])
         self.__run("%s/_search?pretty" % index, data = query)
 
-    def prefix_search(self, argv = []):
-        """prefix-search <index> <term> <field>"""
+    def prefix_match(self, argv = []):
+        """prefix-match <index> <term> <field>"""
         index   = self.__argv(argv, 0)
         term = self.__argv(argv, 1)
         field = self.__argv(argv, 2)
@@ -2150,6 +2151,26 @@ class ES:
                     "%s": {
                         "query": "%s",
                         "analyzer": "name_analyzer_no_dash"
+                    }
+                }
+            },
+            "from": %s,
+            "size": %s
+        }
+        ''' % (field, term, self.options["from"], self.options["size"])
+        self.__run("%s/_search?pretty" % index, data=query)
+
+    def prefix_search(self, argv = []):
+        """prefix-search <index> <term> <field>"""
+        index   = self.__argv(argv, 0)
+        term = self.__argv(argv, 1)
+        field = self.__argv(argv, 2)
+        query = '''
+        {
+            "query": {
+                "prefix": {
+                    "%s": {
+                        "value": "%s"
                     }
                 }
             },
