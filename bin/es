@@ -2030,7 +2030,7 @@ class ES:
         threshold   = self.__argv(argv, 5, "-1")
 
         # Add quotation around strings, and skip otherwise.
-        if value and value[0] not in ["[", "{"]:
+        if value and value != "null" and value[0] not in ["[", "{"]:
             value = '"%s"' % value
 
         data = """{
